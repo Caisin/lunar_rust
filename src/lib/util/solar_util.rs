@@ -2,230 +2,198 @@ use super::{locked_ref_trait::LockRef, mmacro::static_funk};
 use crate::solar::{self, SolarRefHelper};
 use serde_json::Value;
 use std::{
-  collections::HashMap,
-  sync::{Arc, Mutex, MutexGuard},
+    collections::HashMap,
+    sync::{Arc, Mutex, MutexGuard},
 };
 
 #[derive(Clone, Debug)]
 pub struct SolarUtil {
-  __WEEK: Vec<String>,
-  __DAYS_OF_MONTH: Vec<i64>,
-  __XING_ZUO: Vec<String>,
-  __FESTIVAL: HashMap<(i64, i64), String>,
-  __WEEK_FESTIVAL: HashMap<(i64, i64, i64), String>,
-  __OTHER_FESTIVAL: HashMap<(i64, i64), Vec<String>>,
+    __WEEK: Vec<String>,
+    __DAYS_OF_MONTH: Vec<i64>,
+    __XING_ZUO: Vec<String>,
+    __FESTIVAL: HashMap<(i64, i64), String>,
+    __WEEK_FESTIVAL: HashMap<(i64, i64, i64), String>,
+    __OTHER_FESTIVAL: HashMap<(i64, i64), Vec<String>>,
 }
 
 pub type SolarUtilRef = Arc<Mutex<SolarUtil>>;
 pub trait SolarUtilRefHelper: LockRef {
-  fn WEEK(&self) -> Vec<String>;
-  fn DAYS_OF_MONTH(&self) -> Vec<i64>;
-  fn XING_ZUO(&self) -> Vec<String>;
-  fn FESTIVAL(&self) -> HashMap<(i64, i64), String>;
-  fn WEEK_FESTIVAL(&self) -> HashMap<(i64, i64, i64), String>;
-  fn OTHER_FESTIVAL(&self) -> HashMap<(i64, i64), Vec<String>>;
-  fn is_leap_year(&self, year: i64) -> bool;
-  fn get_days_of_year(&self, year: i64) -> i64;
-  fn get_days_of_month(&self, year: i64, month: i64) -> i64;
-  fn get_days_in_year(&self, year: i64, month: i64, day: i64) -> i64;
-  fn get_weeks_of_month(
-    &self,
-    year: i64,
-    month: i64,
-    start: i64,
-  ) -> i64;
-  fn get_days_between(
-    &self,
-    ay: i64,
-    am: i64,
-    ad: i64,
-    by: i64,
-    bm: i64,
-    bd: i64,
-  ) -> i64;
+    fn WEEK(&self) -> Vec<String>;
+    fn DAYS_OF_MONTH(&self) -> Vec<i64>;
+    fn XING_ZUO(&self) -> Vec<String>;
+    fn FESTIVAL(&self) -> HashMap<(i64, i64), String>;
+    fn WEEK_FESTIVAL(&self) -> HashMap<(i64, i64, i64), String>;
+    fn OTHER_FESTIVAL(&self) -> HashMap<(i64, i64), Vec<String>>;
+    fn is_leap_year(&self, year: i64) -> bool;
+    fn get_days_of_year(&self, year: i64) -> i64;
+    fn get_days_of_month(&self, year: i64, month: i64) -> i64;
+    fn get_days_in_year(&self, year: i64, month: i64, day: i64) -> i64;
+    fn get_weeks_of_month(&self, year: i64, month: i64, start: i64) -> i64;
+    fn get_days_between(&self, ay: i64, am: i64, ad: i64, by: i64, bm: i64, bd: i64) -> i64;
 }
 
 impl SolarUtilRefHelper for SolarUtilRef {
-  fn WEEK(&self) -> Vec<String> {
-    self.as_locked_ref().__WEEK.clone()
-  }
-  fn DAYS_OF_MONTH(&self) -> Vec<i64> {
-    self.as_locked_ref().__DAYS_OF_MONTH.clone()
-  }
-  fn XING_ZUO(&self) -> Vec<String> {
-    self.as_locked_ref().__XING_ZUO.clone()
-  }
-  fn FESTIVAL(&self) -> HashMap<(i64, i64), String> {
-    self.as_locked_ref().__FESTIVAL.clone()
-  }
-  fn WEEK_FESTIVAL(&self) -> HashMap<(i64, i64, i64), String> {
-    self.as_locked_ref().__WEEK_FESTIVAL.clone()
-  }
-  fn OTHER_FESTIVAL(&self) -> HashMap<(i64, i64), Vec<String>> {
-    self.as_locked_ref().__OTHER_FESTIVAL.clone()
-  }
+    fn WEEK(&self) -> Vec<String> {
+        self.as_locked_ref().__WEEK.clone()
+    }
+    fn DAYS_OF_MONTH(&self) -> Vec<i64> {
+        self.as_locked_ref().__DAYS_OF_MONTH.clone()
+    }
+    fn XING_ZUO(&self) -> Vec<String> {
+        self.as_locked_ref().__XING_ZUO.clone()
+    }
+    fn FESTIVAL(&self) -> HashMap<(i64, i64), String> {
+        self.as_locked_ref().__FESTIVAL.clone()
+    }
+    fn WEEK_FESTIVAL(&self) -> HashMap<(i64, i64, i64), String> {
+        self.as_locked_ref().__WEEK_FESTIVAL.clone()
+    }
+    fn OTHER_FESTIVAL(&self) -> HashMap<(i64, i64), Vec<String>> {
+        self.as_locked_ref().__OTHER_FESTIVAL.clone()
+    }
 
-  ///
-  /// 是否闰年
-  ///
-  /// ## Arguments
-  /// + year: **&str** - 年
-  ///
-  /// ## Returns
-  /// + **True** - 闰年
-  /// + **False** - 非闰年
-  ///
-  fn is_leap_year(&self, year: i64) -> bool {
-    match year < 1600 {
-      true => year % 4 == 0,
-      _ => (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0),
+    ///
+    /// 是否闰年
+    ///
+    /// ## Arguments
+    /// + year: **&str** - 年
+    ///
+    /// ## Returns
+    /// + **True** - 闰年
+    /// + **False** - 非闰年
+    ///
+    fn is_leap_year(&self, year: i64) -> bool {
+        match year < 1600 {
+            true => year % 4 == 0,
+            _ => (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0),
+        }
     }
-  }
 
-  fn get_days_of_year(&self, year: i64) -> i64 {
-    if year == 1582 {
-      return 355;
+    fn get_days_of_year(&self, year: i64) -> i64 {
+        if year == 1582 {
+            return 355;
+        }
+        if self.is_leap_year(year) {
+            return 366;
+        }
+        365
     }
-    if self.is_leap_year(year) {
-      return 366;
-    }
-    365
-  }
 
-  ///
-  /// 获取某年某月有多少天
-  ///
-  /// ## Arguments
-  /// + year: **i64** - 年
-  /// + month: **i64** - 月 (1-12)
-  ///
-  /// ## Returns
-  /// + 天数: **i64**
-  ///
-  fn get_days_of_month(&self, year: i64, month: i64) -> i64 {
-    if year == 1582 && month == 10 {
-      return 21;
+    ///
+    /// 获取某年某月有多少天
+    ///
+    /// ## Arguments
+    /// + year: **i64** - 年
+    /// + month: **i64** - 月 (1-12)
+    ///
+    /// ## Returns
+    /// + 天数: **i64**
+    ///
+    fn get_days_of_month(&self, year: i64, month: i64) -> i64 {
+        if year == 1582 && month == 10 {
+            return 21;
+        }
+        let mut d = { self.DAYS_OF_MONTH()[(month - 1) as usize].clone() };
+        if month == 2 && self.is_leap_year(year) {
+            d = d + 1;
+        }
+        d
     }
-    let mut d = { self.DAYS_OF_MONTH()[(month - 1) as usize].clone() };
-    if month == 2 && self.is_leap_year(year) {
-      d = d + 1;
-    }
-    d
-  }
 
-  fn get_days_in_year(&self, year: i64, month: i64, day: i64) -> i64 {
-    let mut days = 0 as i64;
-    for m in 1..month {
-      days = days + self.get_days_of_month(year, m);
+    fn get_days_in_year(&self, year: i64, month: i64, day: i64) -> i64 {
+        let mut days = 0 as i64;
+        for m in 1..month {
+            days = days + self.get_days_of_month(year, m);
+        }
+        let mut d = day;
+        if year == 1582 && month == 10 {
+            if day >= 15 {
+                d = d - 10;
+            } else if day > 4 {
+                assert!(false, "wrong solar year {year} month {month} day {day}");
+            }
+        }
+        days = days + d;
+        days
     }
-    let mut d = day;
-    if year == 1582 && month == 10 {
-      if day >= 15 {
-        d = d - 10;
-      } else if day > 4 {
-        assert!(
-          false,
-          "wrong solar year {year} month {month} day {day}"
-        );
-      }
-    }
-    days = days + d;
-    days
-  }
 
-  ///
-  /// 获取某年某月有多少周
-  ///
-  /// ## Arguments
-  /// + year: **i64** - 年
-  /// + month: **i64** - 月
-  /// + start: 星期几作为一周的开始，1234560分别代表星期一至星期天
-  ///
-  /// ## Returns
-  /// + 天数: **i64**
-  ///
-  fn get_weeks_of_month(
-    &self,
-    year: i64,
-    month: i64,
-    start: i64,
-  ) -> i64 {
-    let s = (self.get_days_of_month(year, month)
-      + solar::from_ymd(year, month, 1).get_week()
-      - start) as f64
-      / { self.WEEK().len() } as f64;
-    s.ceil() as i64
-  }
-
-  fn get_days_between(
-    &self,
-    ay: i64,
-    am: i64,
-    ad: i64,
-    by: i64,
-    bm: i64,
-    bd: i64,
-  ) -> i64 {
-    if ay == by {
-      self.get_days_in_year(by, bm, bd)
-        - self.get_days_in_year(ay, am, ad)
-    } else if ay > by {
-      let mut days =
-        self.get_days_of_year(by) - self.get_days_in_year(by, bm, bd);
-      for i in (by + 1)..ay {
-        days = days + self.get_days_of_year(i);
-      }
-      days = days + self.get_days_in_year(ay, am, ad);
-      days
-    } else {
-      let mut days =
-        self.get_days_of_year(ay) - self.get_days_in_year(ay, am, ad);
-      for i in (ay + 1)..by {
-        days = days + self.get_days_of_year(i);
-      }
-      days = days + self.get_days_in_year(by, bm, bd);
-      days
+    ///
+    /// 获取某年某月有多少周
+    ///
+    /// ## Arguments
+    /// + year: **i64** - 年
+    /// + month: **i64** - 月
+    /// + start: 星期几作为一周的开始，1234560分别代表星期一至星期天
+    ///
+    /// ## Returns
+    /// + 天数: **i64**
+    ///
+    fn get_weeks_of_month(&self, year: i64, month: i64, start: i64) -> i64 {
+        let s = (self.get_days_of_month(year, month) + solar::from_ymd(year, month, 1).get_week()
+            - start) as f64
+            / { self.WEEK().len() } as f64;
+        s.ceil() as i64
     }
-  }
+
+    fn get_days_between(&self, ay: i64, am: i64, ad: i64, by: i64, bm: i64, bd: i64) -> i64 {
+        if ay == by {
+            self.get_days_in_year(by, bm, bd) - self.get_days_in_year(ay, am, ad)
+        } else if ay > by {
+            let mut days = self.get_days_of_year(by) - self.get_days_in_year(by, bm, bd);
+            for i in (by + 1)..ay {
+                days = days + self.get_days_of_year(i);
+            }
+            days = days + self.get_days_in_year(ay, am, ad);
+            days
+        } else {
+            let mut days = self.get_days_of_year(ay) - self.get_days_in_year(ay, am, ad);
+            for i in (ay + 1)..by {
+                days = days + self.get_days_of_year(i);
+            }
+            days = days + self.get_days_in_year(by, bm, bd);
+            days
+        }
+    }
 }
 
 impl LockRef for SolarUtilRef {
-  type Output<'a>  = MutexGuard<'a, SolarUtil> where Self: 'a;
-  fn as_locked_ref<'a>(&'a self) -> Self::Output<'a> {
-    self.lock().unwrap()
-  }
+    type Output<'a>
+        = MutexGuard<'a, SolarUtil>
+    where
+        Self: 'a;
+    fn as_locked_ref<'a>(&'a self) -> Self::Output<'a> {
+        self.lock().unwrap()
+    }
 }
 
 impl SolarUtil {
-  // pub fn get() -> SolarUtilRef {
-  //   static INSTANCE: SolarUtilRef = SolarUtil::__default();
-  //   INSTANCE.clone()
-  // }
+    // pub fn get() -> SolarUtilRef {
+    //   static INSTANCE: SolarUtilRef = SolarUtil::__default();
+    //   INSTANCE.clone()
+    // }
 
-  fn __default() -> SolarUtilRef {
-    Arc::new(Mutex::new(Self {
-      // 星期
-      __WEEK: ["日", "一", "二", "三", "四", "五", "六"]
-        .iter()
-        .map(|c| c.to_string())
-        .collect::<Vec<_>>(),
-      // 每月天数
-      __DAYS_OF_MONTH: vec![
-        31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31,
-      ],
-      // 星座
-      __XING_ZUO: [
-        "白羊", "金牛", "双子", "巨蟹", "狮子", "处女", "天秤", "天蝎",
-        "射手", "摩羯", "水瓶", "双鱼",
-      ]
-      .iter()
-      .map(|c| c.to_string())
-      .collect::<Vec<_>>(),
-      //
-      __FESTIVAL: {
-        let mut hm = HashMap::new();
-        let v: Value = serde_json::from_str(
-          r#"{
+    fn __default() -> SolarUtilRef {
+        Arc::new(Mutex::new(Self {
+            // 星期
+            __WEEK: ["日", "一", "二", "三", "四", "五", "六"]
+                .iter()
+                .map(|c| c.to_string())
+                .collect::<Vec<_>>(),
+            // 每月天数
+            __DAYS_OF_MONTH: vec![31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31],
+            // 星座
+            __XING_ZUO: [
+                "白羊", "金牛", "双子", "巨蟹", "狮子", "处女", "天秤", "天蝎", "射手", "摩羯",
+                "水瓶", "双鱼",
+            ]
+            .iter()
+            .map(|c| c.to_string())
+            .collect::<Vec<_>>(),
+            //
+            __FESTIVAL: {
+                let mut hm = HashMap::new();
+                let v: Value = serde_json::from_str(
+                    r#"{
           "1-1": "元旦节",
           "2-14": "情人节",
           "3-8": "妇女节",
@@ -244,26 +212,23 @@ impl SolarUtil {
           "10-31": "万圣节前夜",
           "11-1": "万圣节"
         }"#,
-        )
-        .unwrap();
-        for (key, val) in v.as_object().unwrap() {
-          let key = key
-            .to_string()
-            .split("-")
-            .into_iter()
-            .map(|k| k.parse::<i64>().unwrap())
-            .collect::<Vec<_>>();
-          hm.insert(
-            (key[0], key[1]),
-            val.as_str().unwrap().to_string(),
-          );
-        }
-        hm
-      },
-      __WEEK_FESTIVAL: {
-        let mut hm = HashMap::new();
-        let v: Value = serde_json::from_str(
-          r#"{
+                )
+                .unwrap();
+                for (key, val) in v.as_object().unwrap() {
+                    let key = key
+                        .to_string()
+                        .split("-")
+                        .into_iter()
+                        .map(|k| k.parse::<i64>().unwrap())
+                        .collect::<Vec<_>>();
+                    hm.insert((key[0], key[1]), val.as_str().unwrap().to_string());
+                }
+                hm
+            },
+            __WEEK_FESTIVAL: {
+                let mut hm = HashMap::new();
+                let v: Value = serde_json::from_str(
+                    r#"{
           "3-0-1": "全国中小学生安全教育日",
           "5-2-0": "母亲节",
           "5-3-0": "全国助残日",
@@ -272,26 +237,23 @@ impl SolarUtil {
           "10-1-1": "世界住房日",
           "11-4-4": "感恩节"
         }"#,
-        )
-        .unwrap();
-        for (key, val) in v.as_object().unwrap() {
-          let key = key
-            .to_string()
-            .split("-")
-            .into_iter()
-            .map(|k| k.parse::<i64>().unwrap())
-            .collect::<Vec<_>>();
-          hm.insert(
-            (key[0], key[1], key[2]),
-            val.as_str().unwrap().to_string(),
-          );
-        }
-        hm
-      },
-      __OTHER_FESTIVAL: {
-        let mut hm = HashMap::new();
-        let v: Value = serde_json::from_str(
-          r#"{
+                )
+                .unwrap();
+                for (key, val) in v.as_object().unwrap() {
+                    let key = key
+                        .to_string()
+                        .split("-")
+                        .into_iter()
+                        .map(|k| k.parse::<i64>().unwrap())
+                        .collect::<Vec<_>>();
+                    hm.insert((key[0], key[1], key[2]), val.as_str().unwrap().to_string());
+                }
+                hm
+            },
+            __OTHER_FESTIVAL: {
+                let mut hm = HashMap::new();
+                let v: Value = serde_json::from_str(
+                    r#"{
           "1-8": ["周恩来逝世纪念日"],
           "1-10": ["中国人民警察节"],
           "1-14": ["日记情人节"],
@@ -430,27 +392,27 @@ impl SolarUtil {
           "12-18": ["国际移徙者日"],
           "12-26": ["毛泽东诞辰纪念日"]
         }"#,
-        )
-        .unwrap();
-        for (key, val) in v.as_object().unwrap() {
-          let key = key
-            .to_string()
-            .split("-")
-            .into_iter()
-            .map(|k| k.parse::<i64>().unwrap())
-            .collect::<Vec<_>>();
-          let val = val
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|val| val.as_str().unwrap().to_string())
-            .collect::<Vec<_>>();
-          hm.insert((key[0], key[1]), val);
-        }
-        hm
-      },
-    }))
-  }
+                )
+                .unwrap();
+                for (key, val) in v.as_object().unwrap() {
+                    let key = key
+                        .to_string()
+                        .split("-")
+                        .into_iter()
+                        .map(|k| k.parse::<i64>().unwrap())
+                        .collect::<Vec<_>>();
+                    let val = val
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .map(|val| val.as_str().unwrap().to_string())
+                        .collect::<Vec<_>>();
+                    hm.insert((key[0], key[1]), val);
+                }
+                hm
+            },
+        }))
+    }
 }
 
 static_funk!(get, SolarUtilRef, SolarUtil::__default());

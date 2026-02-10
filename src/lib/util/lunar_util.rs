@@ -1,8 +1,8 @@
 use super::{
-  day_shen_sha::DayShenSha,
-  day_yi_ji::DayYiJi,
-  mmacro::{static_funk, static_vec_string_funk},
-  time_yi_ji::TimeYiJi,
+    day_shen_sha::DayShenSha,
+    day_yi_ji::DayYiJi,
+    mmacro::{static_funk, static_vec_string_funk},
+    time_yi_ji::TimeYiJi,
 };
 use chrono::NaiveTime;
 use serde_json::Value;
@@ -13,632 +13,587 @@ use std::collections::HashMap;
 pub struct LunarUtil {}
 
 impl LunarUtil {
-  fn __default() -> Self {
-    Self {}
-  }
+    fn __default() -> Self {
+        Self {}
+    }
 }
 
 impl LunarUtil {
-  /// 获取HH:mm时刻的地支序号，非法的时刻返回 **0**
-  ///
-  /// ## Arguments
-  ///
-  /// + hm: **&str** - HH:mm 时刻
-  ///
-  /// ## Returns
-  /// + 地支序号: **i64** - 0到11
-  ///
-  pub fn get_time_zhi_index(hm: &str) -> i64 {
-    if hm.len() <= 0 {
-      return 0;
+    /// 获取HH:mm时刻的地支序号，非法的时刻返回 **0**
+    ///
+    /// ## Arguments
+    ///
+    /// + hm: **&str** - HH:mm 时刻
+    ///
+    /// ## Returns
+    /// + 地支序号: **i64** - 0到11
+    ///
+    pub fn get_time_zhi_index(hm: &str) -> i64 {
+        if hm.len() <= 0 {
+            return 0;
+        }
+        let (hour, min) = {
+            let hm = hm.split(":").collect::<Vec<_>>();
+            (hm[0].parse::<i64>(), hm[1].parse::<i64>())
+        };
+        if hour.is_err() || min.is_err() {
+            return 0;
+        }
+        let (hour, min) = (hour.unwrap(), min.unwrap());
+        for (idx, (start, end)) in [
+            ((1, 0), (2, 59)),
+            ((3, 0), (4, 59)),
+            ((5, 0), (6, 59)),
+            ((7, 0), (8, 59)),
+            ((9, 0), (10, 59)),
+            ((11, 0), (12, 59)),
+            ((13, 0), (14, 59)),
+            ((15, 0), (16, 59)),
+            ((17, 0), (18, 59)),
+            ((19, 0), (20, 59)),
+            ((21, 0), (22, 59)),
+            // ((23, 0), (0, 59)),
+        ]
+        .iter()
+        .enumerate()
+        {
+            let start = NaiveTime::from_hms_opt(start.0, start.1, 0).unwrap();
+            let end = NaiveTime::from_hms_opt(end.0, end.1, 0).unwrap();
+            let test = NaiveTime::from_hms_opt(hour as u32, min as u32, 0).unwrap();
+            if test >= start && test <= end {
+                return (idx + 1) as i64;
+            }
+        }
+
+        return 0;
     }
-    let (hour, min) = {
-      let hm = hm.split(":").collect::<Vec<_>>();
-      (hm[0].parse::<i64>(), hm[1].parse::<i64>())
-    };
-    if hour.is_err() || min.is_err() {
-      return 0;
-    }
-    let (hour, min) = (hour.unwrap(), min.unwrap());
-    for (idx, (start, end)) in [
-      ((1, 0), (2, 59)),
-      ((3, 0), (4, 59)),
-      ((5, 0), (6, 59)),
-      ((7, 0), (8, 59)),
-      ((9, 0), (10, 59)),
-      ((11, 0), (12, 59)),
-      ((13, 0), (14, 59)),
-      ((15, 0), (16, 59)),
-      ((17, 0), (18, 59)),
-      ((19, 0), (20, 59)),
-      ((21, 0), (22, 59)),
-      // ((23, 0), (0, 59)),
-    ]
-    .iter()
-    .enumerate()
-    {
-      let start = NaiveTime::from_hms_opt(start.0, start.1, 0).unwrap();
-      let end = NaiveTime::from_hms_opt(end.0, end.1, 0).unwrap();
-      let test =
-        NaiveTime::from_hms_opt(hour as u32, min as u32, 0).unwrap();
-      if test >= start && test <= end {
-        return (idx + 1) as i64;
-      }
+
+    ///
+    /// 将HH:mm时刻转换为时辰（地支），非法的时刻返回"子"
+    ///
+    /// ## Arguments
+    /// + hm: **&str** - HH:mm时刻
+    ///
+    /// ## Returns
+    /// + 时辰(地支): **String**，如"子"
+    ///
+    #[allow(dead_code)]
+    fn convert_time(hm: &str) -> String {
+        ZHI()[LunarUtil::get_time_zhi_index(hm) as usize + 1].to_string()
     }
 
-    return 0;
-  }
-
-  ///
-  /// 将HH:mm时刻转换为时辰（地支），非法的时刻返回"子"
-  ///
-  /// ## Arguments
-  /// + hm: **&str** - HH:mm时刻
-  ///
-  /// ## Returns
-  /// + 时辰(地支): **String**，如"子"
-  ///
-  #[allow(dead_code)]
-  fn convert_time(hm: &str) -> String {
-    ZHI()[LunarUtil::get_time_zhi_index(hm) as usize + 1].to_string()
-  }
-
-  ///
-  /// 数字转十六进制
-  ///
-  /// ## Arguments
-  /// + n: **i64** 数字
-  ///
-  /// ## Returns
-  /// + 十六进制: **String**
-  ///
-  pub fn __hex(n: i64) -> String {
-    let n = format!("{:X}", n);
-    match n.len() < 2 {
-      true => format!("0{}", n),
-      _ => n,
+    ///
+    /// 数字转十六进制
+    ///
+    /// ## Arguments
+    /// + n: **i64** 数字
+    ///
+    /// ## Returns
+    /// + 十六进制: **String**
+    ///
+    pub fn __hex(n: i64) -> String {
+        let n = format!("{:X}", n);
+        match n.len() < 2 {
+            true => format!("0{}", n),
+            _ => n,
+        }
     }
-  }
 
-  ///
-  /// 获取干支对应的甲子序号
-  ///
-  /// ## Arguments
-  /// + gan_zhi: **&str** - 干支
-  ///
-  /// ## Returns
-  /// + 甲子序号: **i64**
-  ///
-  pub fn get_jia_zi_index(gan_zhi: &str) -> i64 {
-    for (idx, jia_zi) in JIA_ZI().iter().enumerate() {
-      if *jia_zi == gan_zhi {
-        return idx as i64;
-      }
+    ///
+    /// 获取干支对应的甲子序号
+    ///
+    /// ## Arguments
+    /// + gan_zhi: **&str** - 干支
+    ///
+    /// ## Returns
+    /// + 甲子序号: **i64**
+    ///
+    pub fn get_jia_zi_index(gan_zhi: &str) -> i64 {
+        for (idx, jia_zi) in JIA_ZI().iter().enumerate() {
+            if *jia_zi == gan_zhi {
+                return idx as i64;
+            }
+        }
+        return -1;
     }
-    return -1;
-  }
 
-  ///
-  /// 获取日宜
-  ///
-  /// ## Arguments
-  /// + month_gan_zhi: **&str** - 月干支
-  /// + day_gan_zhi: **&str** - 日干支
-  ///
-  /// ## Returns
-  /// + 宜: **Vec\<String\>**
-  ///
-  pub fn get_day_yi(
-    month_gan_zhi: &str,
-    day_gan_zhi: &str,
-  ) -> Vec<String> {
-    let day_hex =
-      LunarUtil::__hex(LunarUtil::get_jia_zi_index(day_gan_zhi));
-    let month_hex =
-      LunarUtil::__hex(LunarUtil::get_jia_zi_index(month_gan_zhi));
-    let mut yi = __DAY_YI_JI()
-      .clone()
-      .collect_yi_hexs(&day_hex, &month_hex)
-      .iter()
-      .map(|yih| i64::from_str_radix(&yih, 16).unwrap() as usize)
-      .map(|yih| __YI_JI()[yih].to_string())
-      .collect::<Vec<_>>();
-    if yi.is_empty() {
-      yi.push("无".to_string());
+    ///
+    /// 获取日宜
+    ///
+    /// ## Arguments
+    /// + month_gan_zhi: **&str** - 月干支
+    /// + day_gan_zhi: **&str** - 日干支
+    ///
+    /// ## Returns
+    /// + 宜: **Vec\<String\>**
+    ///
+    pub fn get_day_yi(month_gan_zhi: &str, day_gan_zhi: &str) -> Vec<String> {
+        let day_hex = LunarUtil::__hex(LunarUtil::get_jia_zi_index(day_gan_zhi));
+        let month_hex = LunarUtil::__hex(LunarUtil::get_jia_zi_index(month_gan_zhi));
+        let mut yi = __DAY_YI_JI()
+            .clone()
+            .collect_yi_hexs(&day_hex, &month_hex)
+            .iter()
+            .map(|yih| i64::from_str_radix(&yih, 16).unwrap() as usize)
+            .map(|yih| __YI_JI()[yih].to_string())
+            .collect::<Vec<_>>();
+        if yi.is_empty() {
+            yi.push("无".to_string());
+        }
+        yi
     }
-    yi
-  }
 
-  ///
-  /// 获取日忌
-  ///
-  /// ## Arguments
-  /// + month_gan_zhi: **&str** - 月干支
-  /// + day_gan_zhi: **&str** - 日干支
-  ///
-  /// ## Returns
-  /// + 忌: **Vec\<String\>**
-  ///
-  pub fn get_day_ji(
-    month_gan_zhi: &str,
-    day_gan_zhi: &str,
-  ) -> Vec<String> {
-    let day_hex =
-      LunarUtil::__hex(LunarUtil::get_jia_zi_index(day_gan_zhi));
-    let month_hex =
-      LunarUtil::__hex(LunarUtil::get_jia_zi_index(month_gan_zhi));
-    let mut ji = __DAY_YI_JI()
-      .clone()
-      .collect_ji_hexs(&day_hex, &month_hex)
-      .iter()
-      .map(|jih| i64::from_str_radix(&jih, 16).unwrap() as usize)
-      .map(|jih| __YI_JI()[jih].to_string())
-      .collect::<Vec<_>>();
-    if ji.is_empty() {
-      ji.push("无".to_string());
+    ///
+    /// 获取日忌
+    ///
+    /// ## Arguments
+    /// + month_gan_zhi: **&str** - 月干支
+    /// + day_gan_zhi: **&str** - 日干支
+    ///
+    /// ## Returns
+    /// + 忌: **Vec\<String\>**
+    ///
+    pub fn get_day_ji(month_gan_zhi: &str, day_gan_zhi: &str) -> Vec<String> {
+        let day_hex = LunarUtil::__hex(LunarUtil::get_jia_zi_index(day_gan_zhi));
+        let month_hex = LunarUtil::__hex(LunarUtil::get_jia_zi_index(month_gan_zhi));
+        let mut ji = __DAY_YI_JI()
+            .clone()
+            .collect_ji_hexs(&day_hex, &month_hex)
+            .iter()
+            .map(|jih| i64::from_str_radix(&jih, 16).unwrap() as usize)
+            .map(|jih| __YI_JI()[jih].to_string())
+            .collect::<Vec<_>>();
+        if ji.is_empty() {
+            ji.push("无".to_string());
+        }
+        ji
     }
-    ji
-  }
 
-  ///
-  /// 获取日吉神
-  ///
-  /// ## Arguments
-  /// + lunar_month: **i64** - 月
-  /// + day_gan_zhi: **&str** - 日干支
-  ///
-  /// ## Returns
-  /// + 日吉神: **Vec\<String\>**
-  ///
-  pub fn get_day_ji_shen(
-    lunar_month: i64,
-    day_gan_zhi: &str,
-  ) -> Vec<String> {
-    let day_hex =
-      LunarUtil::__hex(LunarUtil::get_jia_zi_index(day_gan_zhi));
-    let month_hex = format!("{:X}", lunar_month);
-    let mut ji_shen = __DAY_SHEN_SHA()
-      .clone()
-      .collect_ji_shen_hexs(&month_hex, &day_hex)
-      .iter()
-      .map(|jsh| i64::from_str_radix(&jsh, 16).unwrap() as usize)
-      .map(|jsh| __SHEN_SHA()[jsh].to_string())
-      .collect::<Vec<_>>();
-    if ji_shen.is_empty() {
-      ji_shen.push("无".to_string());
+    ///
+    /// 获取日吉神
+    ///
+    /// ## Arguments
+    /// + lunar_month: **i64** - 月
+    /// + day_gan_zhi: **&str** - 日干支
+    ///
+    /// ## Returns
+    /// + 日吉神: **Vec\<String\>**
+    ///
+    pub fn get_day_ji_shen(lunar_month: i64, day_gan_zhi: &str) -> Vec<String> {
+        let day_hex = LunarUtil::__hex(LunarUtil::get_jia_zi_index(day_gan_zhi));
+        let month_hex = format!("{:X}", lunar_month);
+        let mut ji_shen = __DAY_SHEN_SHA()
+            .clone()
+            .collect_ji_shen_hexs(&month_hex, &day_hex)
+            .iter()
+            .map(|jsh| i64::from_str_radix(&jsh, 16).unwrap() as usize)
+            .map(|jsh| __SHEN_SHA()[jsh].to_string())
+            .collect::<Vec<_>>();
+        if ji_shen.is_empty() {
+            ji_shen.push("无".to_string());
+        }
+        ji_shen
     }
-    ji_shen
-  }
 
-  ///
-  /// 获取日凶煞
-  ///
-  /// ## Arguments
-  /// + lunar_month: **i64** - 月
-  /// + day_gan_zhi: **&str** - 日干支
-  ///
-  /// ## Returns
-  /// + 日凶煞: **Vec\<String\>**
-  ///
-  pub fn get_day_xiong_sha(
-    lunar_month: i64,
-    day_gan_zhi: &str,
-  ) -> Vec<String> {
-    let day_hex =
-      LunarUtil::__hex(LunarUtil::get_jia_zi_index(day_gan_zhi));
-    let month_hex = format!("{:X}", lunar_month);
-    let mut xiong_sha = __DAY_SHEN_SHA()
-      .clone()
-      .collect_xiong_sha_hexs(&month_hex, &day_hex)
-      .iter()
-      .map(|xsh| i64::from_str_radix(&xsh, 16).unwrap() as usize)
-      .map(|xsh| __SHEN_SHA()[xsh].to_string())
-      .collect::<Vec<_>>();
-    if xiong_sha.is_empty() {
-      xiong_sha.push("无".to_string());
+    ///
+    /// 获取日凶煞
+    ///
+    /// ## Arguments
+    /// + lunar_month: **i64** - 月
+    /// + day_gan_zhi: **&str** - 日干支
+    ///
+    /// ## Returns
+    /// + 日凶煞: **Vec\<String\>**
+    ///
+    pub fn get_day_xiong_sha(lunar_month: i64, day_gan_zhi: &str) -> Vec<String> {
+        let day_hex = LunarUtil::__hex(LunarUtil::get_jia_zi_index(day_gan_zhi));
+        let month_hex = format!("{:X}", lunar_month);
+        let mut xiong_sha = __DAY_SHEN_SHA()
+            .clone()
+            .collect_xiong_sha_hexs(&month_hex, &day_hex)
+            .iter()
+            .map(|xsh| i64::from_str_radix(&xsh, 16).unwrap() as usize)
+            .map(|xsh| __SHEN_SHA()[xsh].to_string())
+            .collect::<Vec<_>>();
+        if xiong_sha.is_empty() {
+            xiong_sha.push("无".to_string());
+        }
+        xiong_sha
     }
-    xiong_sha
-  }
 
-  ///
-  /// 获取时宜
-  ///
-  /// ## Arguments
-  /// + day_gan_zhi: &str - 日干支
-  /// + time_gan_zhi: &str - 时干支
-  ///
-  /// ## Returns
-  /// + 宜: **Vec\<String\>**
-  ///
-  pub fn get_time_yi(
-    day_gan_zhi: &str,
-    time_gan_zhi: &str,
-  ) -> Vec<String> {
-    let day_hex =
-      LunarUtil::__hex(LunarUtil::get_jia_zi_index(day_gan_zhi));
-    let time_hex =
-      LunarUtil::__hex(LunarUtil::get_jia_zi_index(time_gan_zhi));
-    let mut yi = __TIME_YI_JI()
-      .collect_yi_hexs(&day_hex, &time_hex)
-      .iter()
-      .map(|yh| i64::from_str_radix(&yh, 16).unwrap() as usize)
-      .map(|yh| __YI_JI()[yh].to_string())
-      .collect::<Vec<_>>();
-    if yi.is_empty() {
-      yi.push("无".to_string());
+    ///
+    /// 获取时宜
+    ///
+    /// ## Arguments
+    /// + day_gan_zhi: &str - 日干支
+    /// + time_gan_zhi: &str - 时干支
+    ///
+    /// ## Returns
+    /// + 宜: **Vec\<String\>**
+    ///
+    pub fn get_time_yi(day_gan_zhi: &str, time_gan_zhi: &str) -> Vec<String> {
+        let day_hex = LunarUtil::__hex(LunarUtil::get_jia_zi_index(day_gan_zhi));
+        let time_hex = LunarUtil::__hex(LunarUtil::get_jia_zi_index(time_gan_zhi));
+        let mut yi = __TIME_YI_JI()
+            .collect_yi_hexs(&day_hex, &time_hex)
+            .iter()
+            .map(|yh| i64::from_str_radix(&yh, 16).unwrap() as usize)
+            .map(|yh| __YI_JI()[yh].to_string())
+            .collect::<Vec<_>>();
+        if yi.is_empty() {
+            yi.push("无".to_string());
+        }
+        yi
     }
-    yi
-  }
 
-  ///
-  /// 获取时忌
-  ///
-  /// ## Arguments
-  /// + day_gan_zhi: **&str** - 日干支
-  /// + time_gan_zhi: **&str** - 时干支
-  ///
-  /// ## Returns
-  /// + 忌: **Vec\<String\>**
-  ///
-  pub fn get_time_ji(
-    day_gan_zhi: &str,
-    time_gan_zhi: &str,
-  ) -> Vec<String> {
-    let day_hex =
-      LunarUtil::__hex(LunarUtil::get_jia_zi_index(day_gan_zhi));
-    let time_hex =
-      LunarUtil::__hex(LunarUtil::get_jia_zi_index(time_gan_zhi));
-    let mut ji = __TIME_YI_JI()
-      .collect_ji_hexs(&day_hex, &time_hex)
-      .iter()
-      .map(|jh| i64::from_str_radix(&jh, 16).unwrap() as usize)
-      .map(|jh| __YI_JI()[jh].to_string())
-      .collect::<Vec<_>>();
-    if ji.is_empty() {
-      ji.push("无".to_string());
+    ///
+    /// 获取时忌
+    ///
+    /// ## Arguments
+    /// + day_gan_zhi: **&str** - 日干支
+    /// + time_gan_zhi: **&str** - 时干支
+    ///
+    /// ## Returns
+    /// + 忌: **Vec\<String\>**
+    ///
+    pub fn get_time_ji(day_gan_zhi: &str, time_gan_zhi: &str) -> Vec<String> {
+        let day_hex = LunarUtil::__hex(LunarUtil::get_jia_zi_index(day_gan_zhi));
+        let time_hex = LunarUtil::__hex(LunarUtil::get_jia_zi_index(time_gan_zhi));
+        let mut ji = __TIME_YI_JI()
+            .collect_ji_hexs(&day_hex, &time_hex)
+            .iter()
+            .map(|jh| i64::from_str_radix(&jh, 16).unwrap() as usize)
+            .map(|jh| __YI_JI()[jh].to_string())
+            .collect::<Vec<_>>();
+        if ji.is_empty() {
+            ji.push("无".to_string());
+        }
+        ji
     }
-    ji
-  }
 
-  ///
-  /// 获取干支所在旬下标，0-5
-  ///
-  /// ## Arguments
-  /// + gan_zhi: **&str** - 干支
-  ///
-  /// ## Returns
-  /// + 旬下标: *i64** - 0-5
-  ///
-  pub fn get_xun_index(gan_zhi: &str) -> i64 {
-    let (gan, zhi) = LunarUtil::split_ganzhi(gan_zhi);
-    let gan_index = GAN()
-      .iter()
-      .enumerate()
-      .find(|(_, g)| g.to_string() == gan)
-      .unwrap()
-      .0;
-    let zhi_index = ZHI()
-      .iter()
-      .enumerate()
-      .find(|(_, z)| z.to_string() == zhi)
-      .unwrap()
-      .0;
-    let mut diff = gan_index as i64 - zhi_index as i64;
-    if diff < 0 {
-      diff = diff + 12;
+    ///
+    /// 获取干支所在旬下标，0-5
+    ///
+    /// ## Arguments
+    /// + gan_zhi: **&str** - 干支
+    ///
+    /// ## Returns
+    /// + 旬下标: *i64** - 0-5
+    ///
+    pub fn get_xun_index(gan_zhi: &str) -> i64 {
+        let (gan, zhi) = LunarUtil::split_ganzhi(gan_zhi);
+        let gan_index = GAN()
+            .iter()
+            .enumerate()
+            .find(|(_, g)| g.to_string() == gan)
+            .unwrap()
+            .0;
+        let zhi_index = ZHI()
+            .iter()
+            .enumerate()
+            .find(|(_, z)| z.to_string() == zhi)
+            .unwrap()
+            .0;
+        let mut diff = gan_index as i64 - zhi_index as i64;
+        if diff < 0 {
+            diff = diff + 12;
+        }
+        (diff as f64 / 2.) as i64
     }
-    (diff as f64 / 2.) as i64
-  }
 
-  ///
-  /// 获取干支所在旬
-  ///
-  /// ## Arguments
-  /// + gan_zhi: **&str** - 干支
-  ///
-  /// ## Returns
-  /// + 旬: **String**
-  ///
-  pub fn get_xun(gan_zhi: &str) -> String {
-    XUN()[LunarUtil::get_xun_index(gan_zhi) as usize].to_string()
-  }
+    ///
+    /// 获取干支所在旬
+    ///
+    /// ## Arguments
+    /// + gan_zhi: **&str** - 干支
+    ///
+    /// ## Returns
+    /// + 旬: **String**
+    ///
+    pub fn get_xun(gan_zhi: &str) -> String {
+        XUN()[LunarUtil::get_xun_index(gan_zhi) as usize].to_string()
+    }
 
-  ///
-  ///
-  /// 获取干支所在旬对应的旬空(空亡)
-  ///
-  /// ## Arguments
-  /// + gan_zhi: **&str** - 干支
-  ///
-  /// ## Returns
-  /// + 旬空(空亡): **String**
-  ///
-  pub fn get_xun_kong(gan_zhi: &str) -> String {
-    XUN_KONG()[LunarUtil::get_xun_index(gan_zhi) as usize].to_string()
-  }
+    ///
+    ///
+    /// 获取干支所在旬对应的旬空(空亡)
+    ///
+    /// ## Arguments
+    /// + gan_zhi: **&str** - 干支
+    ///
+    /// ## Returns
+    /// + 旬空(空亡): **String**
+    ///
+    pub fn get_xun_kong(gan_zhi: &str) -> String {
+        XUN_KONG()[LunarUtil::get_xun_index(gan_zhi) as usize].to_string()
+    }
 
-  pub fn split_ganzhi(gan_zhi: &str) -> (String, String) {
-    let gz = gan_zhi.chars().map(|c| c.to_string()).collect::<Vec<_>>();
-    (gz[0].clone(), gz[1].clone())
-  }
-
+    pub fn split_ganzhi(gan_zhi: &str) -> (String, String) {
+        let gz = gan_zhi.chars().map(|c| c.to_string()).collect::<Vec<_>>();
+        (gz[0].clone(), gz[1].clone())
+    }
 }
 
 fn gen_word_map(json_str: &str) -> HashMap<String, String> {
-  let mut hm = HashMap::new();
-  let v: Value = serde_json::from_str(json_str).unwrap();
-  for (key, value) in v.as_object().unwrap() {
-    hm.insert(key.to_string(), value.to_string().replace("\"", ""));
-  }
-  hm
+    let mut hm = HashMap::new();
+    let v: Value = serde_json::from_str(json_str).unwrap();
+    for (key, value) in v.as_object().unwrap() {
+        hm.insert(key.to_string(), value.to_string().replace("\"", ""));
+    }
+    hm
 }
 
 static_funk!(BASE_MONTH_ZHI_INDEX, i64, 2);
-static_vec_string_funk!(
-  XUN,
-  ["甲子", "甲戌", "甲申", "甲午", "甲辰", "甲寅"]
-);
-static_vec_string_funk!(
-  XUN_KONG,
-  ["戌亥", "申酉", "午未", "辰巳", "寅卯", "子丑"]
-);
-static_vec_string_funk!(
-  LIU_YAO,
-  ["先胜", "友引", "先负", "佛灭", "大安", "赤口"]
-);
+static_vec_string_funk!(XUN, ["甲子", "甲戌", "甲申", "甲午", "甲辰", "甲寅"]);
+static_vec_string_funk!(XUN_KONG, ["戌亥", "申酉", "午未", "辰巳", "寅卯", "子丑"]);
+static_vec_string_funk!(LIU_YAO, ["先胜", "友引", "先负", "佛灭", "大安", "赤口"]);
 static_vec_string_funk!(HOU, ["初候", "二候", "三候"]);
 static_vec_string_funk!(
-  WU_HOU,
-  [
-    "蚯蚓结",
-    "麋角解",
-    "水泉动",
-    "雁北乡",
-    "鹊始巢",
-    "雉始雊",
-    "鸡始乳",
-    "征鸟厉疾",
-    "水泽腹坚",
-    "东风解冻",
-    "蛰虫始振",
-    "鱼陟负冰",
-    "獭祭鱼",
-    "候雁北",
-    "草木萌动",
-    "桃始华",
-    "仓庚鸣",
-    "鹰化为鸠",
-    "玄鸟至",
-    "雷乃发声",
-    "始电",
-    "桐始华",
-    "田鼠化为鴽",
-    "虹始见",
-    "萍始生",
-    "鸣鸠拂奇羽",
-    "戴胜降于桑",
-    "蝼蝈鸣",
-    "蚯蚓出",
-    "王瓜生",
-    "苦菜秀",
-    "靡草死",
-    "麦秋至",
-    "螳螂生",
-    "鵙始鸣",
-    "反舌无声",
-    "鹿角解",
-    "蜩始鸣",
-    "半夏生",
-    "温风至",
-    "蟋蟀居壁",
-    "鹰始挚",
-    "腐草为萤",
-    "土润溽暑",
-    "大雨行时",
-    "凉风至",
-    "白露降",
-    "寒蝉鸣",
-    "鹰乃祭鸟",
-    "天地始肃",
-    "禾乃登",
-    "鸿雁来",
-    "玄鸟归",
-    "群鸟养羞",
-    "雷始收声",
-    "蛰虫坯户",
-    "水始涸",
-    "鸿雁来宾",
-    "雀入大水为蛤",
-    "菊有黄花",
-    "豺乃祭兽",
-    "草木黄落",
-    "蛰虫咸俯",
-    "水始冰",
-    "地始冻",
-    "雉入大水为蜃",
-    "虹藏不见",
-    "天气上升地气下降",
-    "闭塞而成冬",
-    "鹖鴠不鸣",
-    "虎始交",
-    "荔挺出"
-  ]
+    WU_HOU,
+    [
+        "蚯蚓结",
+        "麋角解",
+        "水泉动",
+        "雁北乡",
+        "鹊始巢",
+        "雉始雊",
+        "鸡始乳",
+        "征鸟厉疾",
+        "水泽腹坚",
+        "东风解冻",
+        "蛰虫始振",
+        "鱼陟负冰",
+        "獭祭鱼",
+        "候雁北",
+        "草木萌动",
+        "桃始华",
+        "仓庚鸣",
+        "鹰化为鸠",
+        "玄鸟至",
+        "雷乃发声",
+        "始电",
+        "桐始华",
+        "田鼠化为鴽",
+        "虹始见",
+        "萍始生",
+        "鸣鸠拂奇羽",
+        "戴胜降于桑",
+        "蝼蝈鸣",
+        "蚯蚓出",
+        "王瓜生",
+        "苦菜秀",
+        "靡草死",
+        "麦秋至",
+        "螳螂生",
+        "鵙始鸣",
+        "反舌无声",
+        "鹿角解",
+        "蜩始鸣",
+        "半夏生",
+        "温风至",
+        "蟋蟀居壁",
+        "鹰始挚",
+        "腐草为萤",
+        "土润溽暑",
+        "大雨行时",
+        "凉风至",
+        "白露降",
+        "寒蝉鸣",
+        "鹰乃祭鸟",
+        "天地始肃",
+        "禾乃登",
+        "鸿雁来",
+        "玄鸟归",
+        "群鸟养羞",
+        "雷始收声",
+        "蛰虫坯户",
+        "水始涸",
+        "鸿雁来宾",
+        "雀入大水为蛤",
+        "菊有黄花",
+        "豺乃祭兽",
+        "草木黄落",
+        "蛰虫咸俯",
+        "水始冰",
+        "地始冻",
+        "雉入大水为蜃",
+        "虹藏不见",
+        "天气上升地气下降",
+        "闭塞而成冬",
+        "鹖鴠不鸣",
+        "虎始交",
+        "荔挺出"
+    ]
 );
 static_vec_string_funk!(
-  GAN,
-  [
-    "", "甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"
-  ]
+    GAN,
+    [
+        "", "甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"
+    ]
 );
 static_vec_string_funk!(
-  POSITION_XI,
-  [
-    "", "艮", "乾", "坤", "离", "巽", "艮", "乾", "坤", "离", "巽"
-  ]
+    POSITION_XI,
+    [
+        "", "艮", "乾", "坤", "离", "巽", "艮", "乾", "坤", "离", "巽"
+    ]
 );
 static_vec_string_funk!(
-  POSITION_YANG_GUI,
-  [
-    "", "坤", "坤", "兑", "乾", "艮", "坎", "离", "艮", "震", "巽"
-  ]
+    POSITION_YANG_GUI,
+    [
+        "", "坤", "坤", "兑", "乾", "艮", "坎", "离", "艮", "震", "巽"
+    ]
 );
 static_vec_string_funk!(
-  POSITION_YIN_GUI,
-  [
-    "", "艮", "坎", "乾", "兑", "坤", "坤", "艮", "离", "巽", "震"
-  ]
+    POSITION_YIN_GUI,
+    [
+        "", "艮", "坎", "乾", "兑", "坤", "坤", "艮", "离", "巽", "震"
+    ]
 );
 static_vec_string_funk!(
-  POSITION_FU,
-  [
-    "", "巽", "巽", "震", "震", "坎", "离", "坤", "坤", "乾", "兑"
-  ]
+    POSITION_FU,
+    [
+        "", "巽", "巽", "震", "震", "坎", "离", "坤", "坤", "乾", "兑"
+    ]
 );
 static_vec_string_funk!(
-  POSITION_FU_2,
-  [
-    "", "坎", "坤", "乾", "巽", "艮", "坎", "坤", "乾", "巽", "艮"
-  ]
+    POSITION_FU_2,
+    [
+        "", "坎", "坤", "乾", "巽", "艮", "坎", "坤", "乾", "巽", "艮"
+    ]
 );
 static_vec_string_funk!(
-  POSITION_CAI,
-  [
-    "", "艮", "艮", "坤", "坤", "坎", "坎", "震", "震", "离", "离"
-  ]
+    POSITION_CAI,
+    [
+        "", "艮", "艮", "坤", "坤", "坎", "坎", "震", "震", "离", "离"
+    ]
 );
 static_vec_string_funk!(
-  POSITION_TAI_SUI_YEAR,
-  [
-    "坎", "艮", "艮", "震", "巽", "巽", "离", "坤", "坤", "兑", "坎",
-    "坎"
-  ]
+    POSITION_TAI_SUI_YEAR,
+    [
+        "坎", "艮", "艮", "震", "巽", "巽", "离", "坤", "坤", "兑", "坎", "坎"
+    ]
 );
 static_vec_string_funk!(
-  POSITION_GAN,
-  ["震", "震", "离", "离", "中", "中", "兑", "兑", "坎", "坎"]
+    POSITION_GAN,
+    ["震", "震", "离", "离", "中", "中", "兑", "兑", "坎", "坎"]
 );
 static_vec_string_funk!(
-  POSITION_ZHI,
-  [
-    "坎", "中", "震", "震", "中", "离", "离", "中", "兑", "兑", "中",
-    "坎"
-  ]
+    POSITION_ZHI,
+    [
+        "坎", "中", "震", "震", "中", "离", "离", "中", "兑", "兑", "中", "坎"
+    ]
 );
 static_vec_string_funk!(
-  POSITION_TAI_DAY,
-  [
-    "占门碓 外东南",
-    "碓磨厕 外东南",
-    "厨灶炉 外正南",
-    "仓库门 外正南",
-    "房床栖 外正南",
-    "占门床 外正南",
-    "占碓磨 外正南",
-    "厨灶厕 外西南",
-    "仓库炉 外西南",
-    "房床门 外西南",
-    "占门栖 外西南",
-    "碓磨床 外西南",
-    "厨灶碓 外西南",
-    "仓库厕 外正西",
-    "房床炉 外正西",
-    "占大门 外正西",
-    "碓磨栖 外正西",
-    "厨灶床 外正西",
-    "仓库碓 外西北",
-    "房床厕 外西北",
-    "占门炉 外西北",
-    "碓磨门 外西北",
-    "厨灶栖 外西北",
-    "仓库床 外西北",
-    "房床碓 外正北",
-    "占门厕 外正北",
-    "碓磨炉 外正北",
-    "厨灶门 外正北",
-    "仓库栖 外正北",
-    "占房床 房内北",
-    "占门碓 房内北",
-    "碓磨厕 房内北",
-    "厨灶炉 房内北",
-    "仓库门 房内北",
-    "房床栖 房内中",
-    "占门床 房内中",
-    "占碓磨 房内南",
-    "厨灶厕 房内南",
-    "仓库炉 房内南",
-    "房床门 房内西",
-    "占门栖 房内东",
-    "碓磨床 房内东",
-    "厨灶碓 房内东",
-    "仓库厕 房内东",
-    "房床炉 房内中",
-    "占大门 外东北",
-    "碓磨栖 外东北",
-    "厨灶床 外东北",
-    "仓库碓 外东北",
-    "房床厕 外东北",
-    "占门炉 外东北",
-    "碓磨门 外正东",
-    "厨灶栖 外正东",
-    "仓库床 外正东",
-    "房床碓 外正东",
-    "占门厕 外正东",
-    "碓磨炉 外东南",
-    "厨灶门 外东南",
-    "仓库栖 外东南",
-    "占房床 外东南"
-  ]
+    POSITION_TAI_DAY,
+    [
+        "占门碓 外东南",
+        "碓磨厕 外东南",
+        "厨灶炉 外正南",
+        "仓库门 外正南",
+        "房床栖 外正南",
+        "占门床 外正南",
+        "占碓磨 外正南",
+        "厨灶厕 外西南",
+        "仓库炉 外西南",
+        "房床门 外西南",
+        "占门栖 外西南",
+        "碓磨床 外西南",
+        "厨灶碓 外西南",
+        "仓库厕 外正西",
+        "房床炉 外正西",
+        "占大门 外正西",
+        "碓磨栖 外正西",
+        "厨灶床 外正西",
+        "仓库碓 外西北",
+        "房床厕 外西北",
+        "占门炉 外西北",
+        "碓磨门 外西北",
+        "厨灶栖 外西北",
+        "仓库床 外西北",
+        "房床碓 外正北",
+        "占门厕 外正北",
+        "碓磨炉 外正北",
+        "厨灶门 外正北",
+        "仓库栖 外正北",
+        "占房床 房内北",
+        "占门碓 房内北",
+        "碓磨厕 房内北",
+        "厨灶炉 房内北",
+        "仓库门 房内北",
+        "房床栖 房内中",
+        "占门床 房内中",
+        "占碓磨 房内南",
+        "厨灶厕 房内南",
+        "仓库炉 房内南",
+        "房床门 房内西",
+        "占门栖 房内东",
+        "碓磨床 房内东",
+        "厨灶碓 房内东",
+        "仓库厕 房内东",
+        "房床炉 房内中",
+        "占大门 外东北",
+        "碓磨栖 外东北",
+        "厨灶床 外东北",
+        "仓库碓 外东北",
+        "房床厕 外东北",
+        "占门炉 外东北",
+        "碓磨门 外正东",
+        "厨灶栖 外正东",
+        "仓库床 外正东",
+        "房床碓 外正东",
+        "占门厕 外正东",
+        "碓磨炉 外东南",
+        "厨灶门 外东南",
+        "仓库栖 外东南",
+        "占房床 外东南"
+    ]
 );
 static_vec_string_funk!(
-  POSITION_TAI_MONTH,
-  [
-    "占房床",
-    "占户窗",
-    "占门堂",
-    "占厨灶",
-    "占房床",
-    "占床仓",
-    "占碓磨",
-    "占厕户",
-    "占门房",
-    "占房床",
-    "占灶炉",
-    "占房床"
-  ]
+    POSITION_TAI_MONTH,
+    [
+        "占房床",
+        "占户窗",
+        "占门堂",
+        "占厨灶",
+        "占房床",
+        "占床仓",
+        "占碓磨",
+        "占厕户",
+        "占门房",
+        "占房床",
+        "占灶炉",
+        "占房床"
+    ]
 );
 static_vec_string_funk!(
-  ZHI,
-  [
-    "", "子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉",
-    "戌", "亥"
-  ]
+    ZHI,
+    [
+        "", "子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"
+    ]
 );
 static_vec_string_funk!(
-  JIA_ZI,
-  [
-    "甲子", "乙丑", "丙寅", "丁卯", "戊辰", "己巳", "庚午", "辛未",
-    "壬申", "癸酉", "甲戌", "乙亥", "丙子", "丁丑", "戊寅", "己卯",
-    "庚辰", "辛巳", "壬午", "癸未", "甲申", "乙酉", "丙戌", "丁亥",
-    "戊子", "己丑", "庚寅", "辛卯", "壬辰", "癸巳", "甲午", "乙未",
-    "丙申", "丁酉", "戊戌", "己亥", "庚子", "辛丑", "壬寅", "癸卯",
-    "甲辰", "乙巳", "丙午", "丁未", "戊申", "己酉", "庚戌", "辛亥",
-    "壬子", "癸丑", "甲寅", "乙卯", "丙辰", "丁巳", "戊午", "己未",
-    "庚申", "辛酉", "壬戌", "癸亥"
-  ]
+    JIA_ZI,
+    [
+        "甲子", "乙丑", "丙寅", "丁卯", "戊辰", "己巳", "庚午", "辛未", "壬申", "癸酉", "甲戌",
+        "乙亥", "丙子", "丁丑", "戊寅", "己卯", "庚辰", "辛巳", "壬午", "癸未", "甲申", "乙酉",
+        "丙戌", "丁亥", "戊子", "己丑", "庚寅", "辛卯", "壬辰", "癸巳", "甲午", "乙未", "丙申",
+        "丁酉", "戊戌", "己亥", "庚子", "辛丑", "壬寅", "癸卯", "甲辰", "乙巳", "丙午", "丁未",
+        "戊申", "己酉", "庚戌", "辛亥", "壬子", "癸丑", "甲寅", "乙卯", "丙辰", "丁巳", "戊午",
+        "己未", "庚申", "辛酉", "壬戌", "癸亥"
+    ]
 );
 static_vec_string_funk!(
-  ZHI_XING,
-  [
-    "", "建", "除", "满", "平", "定", "执", "破", "危", "成", "收",
-    "开", "闭"
-  ]
+    ZHI_XING,
+    [
+        "", "建", "除", "满", "平", "定", "执", "破", "危", "成", "收", "开", "闭"
+    ]
 );
 static_vec_string_funk!(
-  TIAN_SHEN,
-  [
-    "", "青龙", "明堂", "天刑", "朱雀", "金匮", "天德", "白虎", "玉堂",
-    "天牢", "玄武", "司命", "勾陈"
-  ]
+    TIAN_SHEN,
+    [
+        "", "青龙", "明堂", "天刑", "朱雀", "金匮", "天德", "白虎", "玉堂", "天牢", "玄武", "司命",
+        "勾陈"
+    ]
 );
 
 static_funk!(SHOU, HashMap<String, String>, {
@@ -699,34 +654,32 @@ static_funk!(WU_XING_GAN, HashMap<String, String>, {
 });
 
 static_vec_string_funk!(
-  CHONG,
-  [
-    "午", "未", "申", "酉", "戌", "亥", "子", "丑", "寅", "卯", "辰",
-    "巳"
-  ]
+    CHONG,
+    [
+        "午", "未", "申", "酉", "戌", "亥", "子", "丑", "寅", "卯", "辰", "巳"
+    ]
 );
 static_vec_string_funk!(
-  CHONG_GAN,
-  ["戊", "己", "庚", "辛", "壬", "癸", "甲", "乙", "丙", "丁"]
+    CHONG_GAN,
+    ["戊", "己", "庚", "辛", "壬", "癸", "甲", "乙", "丙", "丁"]
 );
 static_vec_string_funk!(
-  CHONG_GAN_TIE,
-  ["己", "戊", "辛", "庚", "癸", "壬", "乙", "甲", "丁", "丙"]
+    CHONG_GAN_TIE,
+    ["己", "戊", "辛", "庚", "癸", "壬", "乙", "甲", "丁", "丙"]
 );
 static_vec_string_funk!(
-  CHONG_GAN_4,
-  ["庚", "辛", "壬", "癸", "", "", "甲", "乙", "丙", "丁"]
+    CHONG_GAN_4,
+    ["庚", "辛", "壬", "癸", "", "", "甲", "乙", "丙", "丁"]
 );
 static_vec_string_funk!(
-  HE_GAN_5,
-  ["己", "庚", "辛", "壬", "癸", "甲", "乙", "丙", "丁", "戊"]
+    HE_GAN_5,
+    ["己", "庚", "辛", "壬", "癸", "甲", "乙", "丙", "丁", "戊"]
 );
 static_vec_string_funk!(
-  HE_ZHI_6,
-  [
-    "丑", "子", "亥", "戌", "酉", "申", "未", "午", "巳", "辰", "卯",
-    "寅"
-  ]
+    HE_ZHI_6,
+    [
+        "丑", "子", "亥", "戌", "酉", "申", "未", "午", "巳", "辰", "卯", "寅"
+    ]
 );
 
 static_funk!(POSITION_DESC, HashMap<String, String>, {
@@ -925,111 +878,107 @@ static_funk!(OTHER_FESTIVAL, HashMap<(i64, i64), Vec<String>>, {
 });
 
 static_vec_string_funk!(
-  PENG_ZU_GAN,
-  [
-    "",
-    "甲不开仓财物耗散",
-    "乙不栽植千株不长",
-    "丙不修灶必见灾殃",
-    "丁不剃头头必生疮",
-    "戊不受田田主不祥",
-    "己不破券二比并亡",
-    "庚不经络织机虚张",
-    "辛不合酱主人不尝",
-    "壬不泱水更难提防",
-    "癸不词讼理弱敌强"
-  ]
+    PENG_ZU_GAN,
+    [
+        "",
+        "甲不开仓财物耗散",
+        "乙不栽植千株不长",
+        "丙不修灶必见灾殃",
+        "丁不剃头头必生疮",
+        "戊不受田田主不祥",
+        "己不破券二比并亡",
+        "庚不经络织机虚张",
+        "辛不合酱主人不尝",
+        "壬不泱水更难提防",
+        "癸不词讼理弱敌强"
+    ]
 );
 static_vec_string_funk!(
-  PENG_ZU_ZHI,
-  [
-    "",
-    "子不问卜自惹祸殃",
-    "丑不冠带主不还乡",
-    "寅不祭祀神鬼不尝",
-    "卯不穿井水泉不香",
-    "辰不哭泣必主重丧",
-    "巳不远行财物伏藏",
-    "午不苫盖屋主更张",
-    "未不服药毒气入肠",
-    "申不安床鬼祟入房",
-    "酉不会客醉坐颠狂",
-    "戌不吃犬作怪上床",
-    "亥不嫁娶不利新郎"
-  ]
+    PENG_ZU_ZHI,
+    [
+        "",
+        "子不问卜自惹祸殃",
+        "丑不冠带主不还乡",
+        "寅不祭祀神鬼不尝",
+        "卯不穿井水泉不香",
+        "辰不哭泣必主重丧",
+        "巳不远行财物伏藏",
+        "午不苫盖屋主更张",
+        "未不服药毒气入肠",
+        "申不安床鬼祟入房",
+        "酉不会客醉坐颠狂",
+        "戌不吃犬作怪上床",
+        "亥不嫁娶不利新郎"
+    ]
 );
 static_vec_string_funk!(
-  NUMBER,
-  [
-    "〇", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十",
-    "十一", "十二"
-  ]
+    NUMBER,
+    [
+        "〇", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十", "十一", "十二"
+    ]
 );
 static_vec_string_funk!(
-  MONTH,
-  [
-    "", "正", "二", "三", "四", "五", "六", "七", "八", "九", "十",
-    "冬", "腊"
-  ]
+    MONTH,
+    [
+        "", "正", "二", "三", "四", "五", "六", "七", "八", "九", "十", "冬", "腊"
+    ]
 );
 static_vec_string_funk!(
-  SEASON,
-  [
-    "", "孟春", "仲春", "季春", "孟夏", "仲夏", "季夏", "孟秋", "仲秋",
-    "季秋", "孟冬", "仲冬", "季冬"
-  ]
+    SEASON,
+    [
+        "", "孟春", "仲春", "季春", "孟夏", "仲夏", "季夏", "孟秋", "仲秋", "季秋", "孟冬", "仲冬",
+        "季冬"
+    ]
 );
 static_vec_string_funk!(
-  SHENGXIAO,
-  [
-    "", "鼠", "牛", "虎", "兔", "龙", "蛇", "马", "羊", "猴", "鸡",
-    "狗", "猪"
-  ]
+    SHENGXIAO,
+    [
+        "", "鼠", "牛", "虎", "兔", "龙", "蛇", "马", "羊", "猴", "鸡", "狗", "猪"
+    ]
 );
 static_vec_string_funk!(
-  DAY,
-  [
-    "", "初一", "初二", "初三", "初四", "初五", "初六", "初七", "初八",
-    "初九", "初十", "十一", "十二", "十三", "十四", "十五", "十六",
-    "十七", "十八", "十九", "二十", "廿一", "廿二", "廿三", "廿四",
-    "廿五", "廿六", "廿七", "廿八", "廿九", "三十"
-  ]
+    DAY,
+    [
+        "", "初一", "初二", "初三", "初四", "初五", "初六", "初七", "初八", "初九", "初十", "十一",
+        "十二", "十三", "十四", "十五", "十六", "十七", "十八", "十九", "二十", "廿一", "廿二",
+        "廿三", "廿四", "廿五", "廿六", "廿七", "廿八", "廿九", "三十"
+    ]
 );
 static_vec_string_funk!(
-  YUE_XIANG,
-  [
-    "",
-    "朔",
-    "既朔",
-    "蛾眉新",
-    "蛾眉新",
-    "蛾眉",
-    "夕",
-    "上弦",
-    "上弦",
-    "九夜",
-    "宵",
-    "宵",
-    "宵",
-    "渐盈凸",
-    "小望",
-    "望",
-    "既望",
-    "立待",
-    "居待",
-    "寝待",
-    "更待",
-    "渐亏凸",
-    "下弦",
-    "下弦",
-    "有明",
-    "有明",
-    "蛾眉残",
-    "蛾眉残",
-    "残",
-    "晓",
-    "晦"
-  ]
+    YUE_XIANG,
+    [
+        "",
+        "朔",
+        "既朔",
+        "蛾眉新",
+        "蛾眉新",
+        "蛾眉",
+        "夕",
+        "上弦",
+        "上弦",
+        "九夜",
+        "宵",
+        "宵",
+        "宵",
+        "渐盈凸",
+        "小望",
+        "望",
+        "既望",
+        "立待",
+        "居待",
+        "寝待",
+        "更待",
+        "渐亏凸",
+        "下弦",
+        "下弦",
+        "有明",
+        "有明",
+        "蛾眉残",
+        "蛾眉残",
+        "残",
+        "晓",
+        "晦"
+    ]
 );
 
 static_funk!(FESTIVAL, HashMap<(i64, i64), String>, {
@@ -1042,7 +991,7 @@ static_funk!(FESTIVAL, HashMap<(i64, i64), String>, {
     "7-7": "七夕节",
     "8-15": "中秋节",
     "9-9": "重阳节",
-    "12-8": "腊八节"        
+    "12-8": "腊八节"
   }"#;
   let v: Value = serde_json::from_str(json_str).unwrap();
   v.as_object().unwrap().iter().for_each(|(key, value)| {
@@ -1465,305 +1414,305 @@ static_funk!(SHI_SHEN, HashMap<String, String>, {
 });
 
 static_vec_string_funk!(
-  __YI_JI,
-  [
-    "祭祀",
-    "祈福",
-    "求嗣",
-    "开光",
-    "塑绘",
-    "齐醮",
-    "斋醮",
-    "沐浴",
-    "酬神",
-    "造庙",
-    "祀灶",
-    "焚香",
-    "谢土",
-    "出火",
-    "雕刻",
-    "嫁娶",
-    "订婚",
-    "纳采",
-    "问名",
-    "纳婿",
-    "归宁",
-    "安床",
-    "合帐",
-    "冠笄",
-    "订盟",
-    "进人口",
-    "裁衣",
-    "挽面",
-    "开容",
-    "修坟",
-    "启钻",
-    "破土",
-    "安葬",
-    "立碑",
-    "成服",
-    "除服",
-    "开生坟",
-    "合寿木",
-    "入殓",
-    "移柩",
-    "普渡",
-    "入宅",
-    "安香",
-    "安门",
-    "修造",
-    "起基",
-    "动土",
-    "上梁",
-    "竖柱",
-    "开井开池",
-    "作陂放水",
-    "拆卸",
-    "破屋",
-    "坏垣",
-    "补垣",
-    "伐木做梁",
-    "作灶",
-    "解除",
-    "开柱眼",
-    "穿屏扇架",
-    "盖屋合脊",
-    "开厕",
-    "造仓",
-    "塞穴",
-    "平治道涂",
-    "造桥",
-    "作厕",
-    "筑堤",
-    "开池",
-    "伐木",
-    "开渠",
-    "掘井",
-    "扫舍",
-    "放水",
-    "造屋",
-    "合脊",
-    "造畜稠",
-    "修门",
-    "定磉",
-    "作梁",
-    "修饰垣墙",
-    "架马",
-    "开市",
-    "挂匾",
-    "纳财",
-    "求财",
-    "开仓",
-    "买车",
-    "置产",
-    "雇庸",
-    "出货财",
-    "安机械",
-    "造车器",
-    "经络",
-    "酝酿",
-    "作染",
-    "鼓铸",
-    "造船",
-    "割蜜",
-    "栽种",
-    "取渔",
-    "结网",
-    "牧养",
-    "安碓磑",
-    "习艺",
-    "入学",
-    "理发",
-    "探病",
-    "见贵",
-    "乘船",
-    "渡水",
-    "针灸",
-    "出行",
-    "移徙",
-    "分居",
-    "剃头",
-    "整手足甲",
-    "纳畜",
-    "捕捉",
-    "畋猎",
-    "教牛马",
-    "会亲友",
-    "赴任",
-    "求医",
-    "治病",
-    "词讼",
-    "起基动土",
-    "破屋坏垣",
-    "盖屋",
-    "造仓库",
-    "立券交易",
-    "交易",
-    "立券",
-    "安机",
-    "会友",
-    "求医疗病",
-    "诸事不宜",
-    "馀事勿取",
-    "行丧",
-    "断蚁",
-    "归岫",
-    "无"
-  ]
+    __YI_JI,
+    [
+        "祭祀",
+        "祈福",
+        "求嗣",
+        "开光",
+        "塑绘",
+        "齐醮",
+        "斋醮",
+        "沐浴",
+        "酬神",
+        "造庙",
+        "祀灶",
+        "焚香",
+        "谢土",
+        "出火",
+        "雕刻",
+        "嫁娶",
+        "订婚",
+        "纳采",
+        "问名",
+        "纳婿",
+        "归宁",
+        "安床",
+        "合帐",
+        "冠笄",
+        "订盟",
+        "进人口",
+        "裁衣",
+        "挽面",
+        "开容",
+        "修坟",
+        "启钻",
+        "破土",
+        "安葬",
+        "立碑",
+        "成服",
+        "除服",
+        "开生坟",
+        "合寿木",
+        "入殓",
+        "移柩",
+        "普渡",
+        "入宅",
+        "安香",
+        "安门",
+        "修造",
+        "起基",
+        "动土",
+        "上梁",
+        "竖柱",
+        "开井开池",
+        "作陂放水",
+        "拆卸",
+        "破屋",
+        "坏垣",
+        "补垣",
+        "伐木做梁",
+        "作灶",
+        "解除",
+        "开柱眼",
+        "穿屏扇架",
+        "盖屋合脊",
+        "开厕",
+        "造仓",
+        "塞穴",
+        "平治道涂",
+        "造桥",
+        "作厕",
+        "筑堤",
+        "开池",
+        "伐木",
+        "开渠",
+        "掘井",
+        "扫舍",
+        "放水",
+        "造屋",
+        "合脊",
+        "造畜稠",
+        "修门",
+        "定磉",
+        "作梁",
+        "修饰垣墙",
+        "架马",
+        "开市",
+        "挂匾",
+        "纳财",
+        "求财",
+        "开仓",
+        "买车",
+        "置产",
+        "雇庸",
+        "出货财",
+        "安机械",
+        "造车器",
+        "经络",
+        "酝酿",
+        "作染",
+        "鼓铸",
+        "造船",
+        "割蜜",
+        "栽种",
+        "取渔",
+        "结网",
+        "牧养",
+        "安碓磑",
+        "习艺",
+        "入学",
+        "理发",
+        "探病",
+        "见贵",
+        "乘船",
+        "渡水",
+        "针灸",
+        "出行",
+        "移徙",
+        "分居",
+        "剃头",
+        "整手足甲",
+        "纳畜",
+        "捕捉",
+        "畋猎",
+        "教牛马",
+        "会亲友",
+        "赴任",
+        "求医",
+        "治病",
+        "词讼",
+        "起基动土",
+        "破屋坏垣",
+        "盖屋",
+        "造仓库",
+        "立券交易",
+        "交易",
+        "立券",
+        "安机",
+        "会友",
+        "求医疗病",
+        "诸事不宜",
+        "馀事勿取",
+        "行丧",
+        "断蚁",
+        "归岫",
+        "无"
+    ]
 );
 static_funk!(__DAY_YI_JI, DayYiJi, DayYiJi::default());
 static_funk!(__TIME_YI_JI, TimeYiJi, TimeYiJi::default());
 static_vec_string_funk!(
-  __SHEN_SHA,
-  [
-    "无",
-    "天恩",
-    "母仓",
-    "时阳",
-    "生气",
-    "益后",
-    "青龙",
-    "灾煞",
-    "天火",
-    "四忌",
-    "八龙",
-    "复日",
-    "续世",
-    "明堂",
-    "月煞",
-    "月虚",
-    "血支",
-    "天贼",
-    "五虚",
-    "土符",
-    "归忌",
-    "血忌",
-    "月德",
-    "月恩",
-    "四相",
-    "王日",
-    "天仓",
-    "不将",
-    "要安",
-    "五合",
-    "鸣吠对",
-    "月建",
-    "小时",
-    "土府",
-    "往亡",
-    "天刑",
-    "天德",
-    "官日",
-    "吉期",
-    "玉宇",
-    "大时",
-    "大败",
-    "咸池",
-    "朱雀",
-    "守日",
-    "天巫",
-    "福德",
-    "六仪",
-    "金堂",
-    "金匮",
-    "厌对",
-    "招摇",
-    "九空",
-    "九坎",
-    "九焦",
-    "相日",
-    "宝光",
-    "天罡",
-    "死神",
-    "月刑",
-    "月害",
-    "游祸",
-    "重日",
-    "时德",
-    "民日",
-    "三合",
-    "临日",
-    "天马",
-    "时阴",
-    "鸣吠",
-    "死气",
-    "地囊",
-    "白虎",
-    "月德合",
-    "敬安",
-    "玉堂",
-    "普护",
-    "解神",
-    "小耗",
-    "天德合",
-    "月空",
-    "驿马",
-    "天后",
-    "除神",
-    "月破",
-    "大耗",
-    "五离",
-    "天牢",
-    "阴德",
-    "福生",
-    "天吏",
-    "致死",
-    "元武",
-    "阳德",
-    "天喜",
-    "天医",
-    "司命",
-    "月厌",
-    "地火",
-    "四击",
-    "大煞",
-    "大会",
-    "天愿",
-    "六合",
-    "五富",
-    "圣心",
-    "河魁",
-    "劫煞",
-    "四穷",
-    "勾陈",
-    "触水龙",
-    "八风",
-    "天赦",
-    "五墓",
-    "八专",
-    "阴错",
-    "四耗",
-    "阳错",
-    "四废",
-    "三阴",
-    "小会",
-    "阴道冲阳",
-    "单阴",
-    "孤辰",
-    "阴位",
-    "行狠",
-    "了戾",
-    "绝阴",
-    "纯阳",
-    "七鸟",
-    "岁薄",
-    "阴阳交破",
-    "阴阳俱错",
-    "阴阳击冲",
-    "逐阵",
-    "阳错阴冲",
-    "七符",
-    "天狗",
-    "九虎",
-    "成日",
-    "天符",
-    "孤阳",
-    "绝阳",
-    "纯阴",
-    "六蛇",
-    "阴神",
-    "解除",
-    "阳破阴冲"
-  ]
+    __SHEN_SHA,
+    [
+        "无",
+        "天恩",
+        "母仓",
+        "时阳",
+        "生气",
+        "益后",
+        "青龙",
+        "灾煞",
+        "天火",
+        "四忌",
+        "八龙",
+        "复日",
+        "续世",
+        "明堂",
+        "月煞",
+        "月虚",
+        "血支",
+        "天贼",
+        "五虚",
+        "土符",
+        "归忌",
+        "血忌",
+        "月德",
+        "月恩",
+        "四相",
+        "王日",
+        "天仓",
+        "不将",
+        "要安",
+        "五合",
+        "鸣吠对",
+        "月建",
+        "小时",
+        "土府",
+        "往亡",
+        "天刑",
+        "天德",
+        "官日",
+        "吉期",
+        "玉宇",
+        "大时",
+        "大败",
+        "咸池",
+        "朱雀",
+        "守日",
+        "天巫",
+        "福德",
+        "六仪",
+        "金堂",
+        "金匮",
+        "厌对",
+        "招摇",
+        "九空",
+        "九坎",
+        "九焦",
+        "相日",
+        "宝光",
+        "天罡",
+        "死神",
+        "月刑",
+        "月害",
+        "游祸",
+        "重日",
+        "时德",
+        "民日",
+        "三合",
+        "临日",
+        "天马",
+        "时阴",
+        "鸣吠",
+        "死气",
+        "地囊",
+        "白虎",
+        "月德合",
+        "敬安",
+        "玉堂",
+        "普护",
+        "解神",
+        "小耗",
+        "天德合",
+        "月空",
+        "驿马",
+        "天后",
+        "除神",
+        "月破",
+        "大耗",
+        "五离",
+        "天牢",
+        "阴德",
+        "福生",
+        "天吏",
+        "致死",
+        "元武",
+        "阳德",
+        "天喜",
+        "天医",
+        "司命",
+        "月厌",
+        "地火",
+        "四击",
+        "大煞",
+        "大会",
+        "天愿",
+        "六合",
+        "五富",
+        "圣心",
+        "河魁",
+        "劫煞",
+        "四穷",
+        "勾陈",
+        "触水龙",
+        "八风",
+        "天赦",
+        "五墓",
+        "八专",
+        "阴错",
+        "四耗",
+        "阳错",
+        "四废",
+        "三阴",
+        "小会",
+        "阴道冲阳",
+        "单阴",
+        "孤辰",
+        "阴位",
+        "行狠",
+        "了戾",
+        "绝阴",
+        "纯阳",
+        "七鸟",
+        "岁薄",
+        "阴阳交破",
+        "阴阳俱错",
+        "阴阳击冲",
+        "逐阵",
+        "阳错阴冲",
+        "七符",
+        "天狗",
+        "九虎",
+        "成日",
+        "天符",
+        "孤阳",
+        "绝阳",
+        "纯阴",
+        "六蛇",
+        "阴神",
+        "解除",
+        "阳破阴冲"
+    ]
 );
 static_funk!(__DAY_SHEN_SHA, DayShenSha, DayShenSha::default());

@@ -1,494 +1,494 @@
-use std::sync::{Arc, Mutex};
-use crate::solar::{self};
 use super::{find_char_index::FindCharIndex, mmacro::__static_funk};
+use crate::solar::{self};
+use std::sync::{Arc, Mutex};
 
 #[derive(Clone, Debug)]
-pub struct ShouXingUtil {
-}
+pub struct ShouXingUtil {}
 
 impl Default for ShouXingUtil {
-  fn default() -> Self {
-    Self {
-
+    fn default() -> Self {
+        Self {}
     }
-  }
 }
 
 impl ShouXingUtil {
-  pub fn nutationLon2(t: f64) -> f64 {
-    let t2 = t * t;
-    let mut dl = 0.;
-    for i in (0..Self::__NUT_B().len()).step_by(5) {
-      let a = match i <= 0 {
-        true => -1.742 * t,
-        _ => 0.
-      };
-      dl = dl + 
-        (
-          Self::__NUT_B()[i + 3] + 
-          a
-        ) * f64::sin(
-          Self::__NUT_B()[i] + 
-            Self::__NUT_B()[i + 1] * 
-            t +
-            Self::__NUT_B()[i + 2] *
-            t2
-        );
-      }
-    dl / 100. / SECOND_PER_RAD
-  }
-
-  pub fn e_lon(t: f64, n: i64) -> f64 {
-    let t = t / 10.;
-    let mut v = 0.;
-    let mut tn = 1.;
-    let pn = 1;
-    let m0 = Self::__XL0()[pn + 1] - Self::__XL0()[pn];
-    for i in 0..6 {
-      let n1 = Self::__XL0()[pn + i] as i64;
-      let n2 = Self::__XL0()[pn + 1 + i] as i64;
-      let n0 = n2 - n1;
-      if n0 == 0 { continue; }
-      let m = match n < 0 {
-        true => n2,
-        _ => {
-          let mut _m = (3. * n as f64 * n0 as f64 / m0 + 0.5) as i64 + n1;
-          if i != 0 {
-            _m = _m + 3;
-          }
-          if _m > n2 {
-            _m = n2;
-          }
-          _m
+    pub fn nutationLon2(t: f64) -> f64 {
+        let t2 = t * t;
+        let mut dl = 0.;
+        for i in (0..Self::__NUT_B().len()).step_by(5) {
+            let a = match i <= 0 {
+                true => -1.742 * t,
+                _ => 0.,
+            };
+            dl = dl
+                + (Self::__NUT_B()[i + 3] + a)
+                    * f64::sin(
+                        Self::__NUT_B()[i]
+                            + Self::__NUT_B()[i + 1] * t
+                            + Self::__NUT_B()[i + 2] * t2,
+                    );
         }
-      };
-      let mut c = 0.;
-      for j in (n1..m).step_by(3) {
-        c = c +
-          Self::__XL0()[j as usize] * f64::cos(
-            Self::__XL0()[j as usize + 1] +
-            t *
-            Self::__XL0()[j as usize + 2]
-          )
-      }
-      v = v + c * tn;
-      tn = tn * t;
-    }
-    v = v / Self::__XL0()[0];
-    let t2 = t * t;
-    let t3 = t2 * t;
-    v = v + 
-      (-0.0728 - 2.7702 * t - 1.1019 * t2 - 0.0996 * t3) /
-      SECOND_PER_RAD
-      ;
-    v
-  }
-
-  pub fn m_lon(t: f64, n: i64) -> f64 {
-    let ob = Self::__XL1();
-    let obl = ob.len();
-    let mut v = 0.;
-    let mut tn = 1.;
-    let mut t2 = t * t;
-    let mut t3 = t2 * t;
-    let mut t4 = t3 * t;
-    let t5 = t4 * t;
-    let tx = t - 10.;
-    v = v +
-      (3.81034409 + 8399.684730072 * t - 3.319e-05 * t2 + 3.11e-08 * t3 - 2.033e-10 * t4) *
-      SECOND_PER_RAD;
-    v = v +
-      5028.792262 * t + 1.1124406 * t2 + 0.00007699 * t3 - 0.000023479 * t4 - 0.0000000178 * t5;
-
-    if tx > 0. {
-      v = v +
-      -0.866 + 1.43 * tx + 0.054 * tx * tx;
+        dl / 100. / SECOND_PER_RAD
     }
 
-    t2 = t2 / 1e4;
-    t3 = t3 / 1e8;
-    t4 = t4 / 1e8;
-
-    let mut n = n * 6;
-    if n < 0 {
-      n = obl as i64;
-    }
-
-    for i in 0..ob.len() {
-      let f = &ob[i];
-      let size = f.len();
-      let mut m = ((n * size as i64) as f64 / obl as f64 + 0.5) as i64;
-      if i > 0 {
-        m = m + 6;
-      }
-      if m >= size as i64 {
-        m = size as i64;
-      }
-      let mut c = 0.;
-      for j in (0..m).step_by(6) {
-        c = c +
-          f[j as usize] * 
-          f64::cos(
-            f[j as usize + 1] + 
-            t * 
-            f[j as usize + 2] + 
-            t2 * 
-            f[j as usize + 3] + 
-            t3 * 
-            f[j as usize + 4] + 
-            t4 * 
-            f[j as usize + 5]
-          )
-          ;
-      }
-      v = v + c * tn;
-      tn = tn * t;
-    }
-    v = v / SECOND_PER_RAD;
-    v
-  }
-
-  pub fn gxc_sun_lon(t: f64) -> f64 {
-    let v = -0.043126 + 628.301955 * t - 0.000002732 * t * t;
-    let e = 0.016708634 - 0.000042037 * t - 0.0000001267 * t * t;
-    -20.49552 * (1. + e * f64::cos(v)) / SECOND_PER_RAD
-  }
-
-  pub fn ev(t: f64) -> f64 {
-    let f = 628.307585 * t;
-    628.332 + 
-    21. * f64::sin(1.527 + f) + 
-    0.44 * f64::sin(1.48 + f * 2.) + 
-    0.129 * f64::sin(5.82 + f) * t + 
-    0.00055 * f64::sin(4.21 + f) * t * t
-  }
-
-  pub fn mv(t: f64) -> f64 {
-    let mut v = 8399.71 - 914. * f64::sin(0.7848 + 8328.691425 * t + 0.0001523 * t * t);
-    v = v - 
-      179. * f64::sin(2.543 + 15542.7543 * t) + 
-      160. * f64::sin(0.1874 + 7214.0629 * t) + 
-      62. * f64::sin(3.14 + 16657.3828 * t) + 
-      34. * f64::sin(4.827 + 16866.9323 * t) + 
-      22. * f64::sin(4.9 + 23871.4457 * t) + 
-      12. * f64::sin(2.59 + 14914.4523 * t) + 
-      7. * f64::sin(0.23 + 6585.7609 * t) + 
-      5. * f64::sin(0.9 + 25195.624 * t) + 
-      5. * f64::sin(2.32 - 7700.3895 * t) + 
-      5. * f64::sin(3.88 + 8956.9934 * t) + 
-      5. * f64::sin(0.49 + 7771.3771 * t);
-    v
-  }
-
-  pub fn sa_lon(t: f64, n: i64) -> f64 {
-    let acc = [Self::e_lon(t, n), Self::nutationLon2(t), Self::gxc_sun_lon(t), PI];
-    acc.iter().sum()
-  }
-
-  pub fn dt_ext(y: f64, jsd: f64) -> f64 {
-    let dy = (y - 1820.) * 1.0 / 100.;
-    - 20. + jsd * dy * dy
-  }
-
-  pub fn dt_calc(y: f64) -> f64 {
-    let size = Self::__DT_AT().len();
-    let y0 = Self::__DT_AT()[size - 2];
-    let t0 = Self::__DT_AT()[size - 1];
-    if y >= y0 {
-      let jsd = 31.;
-      if y > y0 + 100. {
-        let r = Self::dt_ext(y, jsd);
-        return r;
-      }
-      let v = Self::dt_ext(y, jsd);
-      let dv = Self::dt_ext(y0, jsd) - t0;
-      let r = v - dv * (y0 + 100. - y) / 100.;
-      return r;
-    }
-    let mut i = 0;
-    for _i in (0..size).step_by(5) {
-      i = _i;
-      if y < Self::__DT_AT()[i + 5] {
-        break;
-      }
-    }
-    let t1 = (y - Self::__DT_AT()[i]) / (Self::__DT_AT()[i + 5] - Self::__DT_AT()[i]) * 10.;
-    let t2 = t1 * t1;
-    let t3 = t2 * t1;
-    
-    let r = Self::__DT_AT()[i + 1] + 
-      Self::__DT_AT()[i + 2] * t1 + 
-      Self::__DT_AT()[i + 3] * t2 + 
-      Self::__DT_AT()[i + 4] * t3;
-
-
-    r
-  }
-
-  pub fn dt_t(t: f64) -> f64 {
-    Self::dt_calc(t / 365.2425 + 2000.) / SECOND_PER_DAY as f64
-  }
-
-  pub fn sa_lon_t(w: f64) -> f64 {
-    let mut v = 628.3319653318;
-    let mut t = (w - 1.75347 - PI) / v;
-    v = Self::ev(t);
-    t = t + (w - Self::sa_lon(t, 10)) / v;
-    v = Self::ev(t);
-    t = t + (w - Self::sa_lon(t, -1)) / v;
-    t
-  }
-
-  pub fn msa_lon(t: f64, mn: i64, sn: i64) -> f64 {
-    Self::m_lon(t, mn) + (-3.4E-6) - (
-      Self::e_lon(t, sn) + Self::gxc_sun_lon(t) + PI
-    )
-  }
-
-  pub fn msa_lon_t(w: f64) -> f64 {
-    let mut v = 7771.37714500204;
-    let mut t = (w + 1.08472) / v;
-    t = t + (w - Self::msa_lon(t, 3, 3)) / v;
-    v = Self::mv(t) - Self::ev(t);
-    t = t + (w - Self::msa_lon(t, 20, 10)) / v;
-    t = t + (w - Self::msa_lon(t, -1, 60)) / v;
-    t
-  }
-
-  pub fn sa_lon_t2(w: f64) -> f64 {
-    let v = 628.3319653318;
-    let mut t = (w - 1.75347 - PI) / v;
-    t = t - (0.000005297 * t * t + 0.0334166 * f64::cos(4.669257 + 628.307585 * t) + 
-      0.0002061 * f64::cos(2.67823 + 628.307585 * t) * t) / v;
-    t = t + (w - Self::e_lon(t, 8) - PI + 
-      (20.5 + 17.2 * f64::sin(2.1824 - 33.75705 * t)) / SECOND_PER_RAD) / v;
-    t
-  }
-
-  pub fn msa_lon_t2(w: f64) -> f64 {
-    let mut v = 7771.37714500204;
-    let mut t = (w + 1.08472) / v;
-    let mut t2 = t * t;
-    t = t - 
-      (
-        -0.00003309 * t2 + 
-        0.10976 * f64::cos(0.784758 + 8328.6914246 * t + 0.000152292 * t2) + 
-        0.02224 * f64::cos(0.18740 + 7214.0628654 * t - 0.00021848 * t2) - 
-        0.03342 * f64::cos(4.669257 + 628.307585 * t)
-      ) / v;
-    t2 = t * t;
-    let n = Self::m_lon(t, 20) - 
-      (
-        4.8950632 + 628.3319653318 * t + 
-        0.000005297 * t2 + 
-        0.0334166 * f64::cos(4.669257 + 628.307585 * t) + 
-        0.0002061 * f64::cos(2.67823 + 628.307585 * t) * t + 
-        0.000349 * f64::cos(4.6261 + 1256.61517 * t) - 
-        20.5 / SECOND_PER_RAD
-      );
-    v = 7771.38 - 
-      914. * f64::sin(
-        0.7848 + 8328.691425 * t + 0.0001523 * t2
-      ) - 179. * f64::sin(2.543 + 15542.7543 * t) - 
-      160. * f64::sin(0.1874 + 7214.0629 * t);
-    t = t + (w - n) / v;
-    t
-  }
-
-  pub fn qi_high(w: f64) -> f64 {
-    let mut t = Self::sa_lon_t2(w) * 36525.;
-    t = t - Self::dt_t(t) + ONE_THIRD;
-    let v = ((t + 0.5) % 1.) * SECOND_PER_DAY as f64;
-    if v < 1200. || v > SECOND_PER_DAY as f64 - 1200. {
-      t = Self::sa_lon_t(w) * 36525. - Self::dt_t(t) + ONE_THIRD;
-    }
-    t
-  }
-
-  pub fn qi_low(w: f64) -> f64 {
-    let v = 628.3319653318;
-    let mut t = (w - 4.895062166) / v;
-    t = t - (
-      53. * t * t + 334116. * f64::cos(4.67 + 628.307585 * t) + 
-      2061. * f64::cos(2.678 + 628.3076 * t) * t
-    ) / v / 10000000.;
-    let n = 48950621.66 + 
-      6283319653.318 * t + 
-      53. * t * t + 
-      334166. * f64::cos(4.669257 + 628.307585 * t) + 
-      3489. * f64::cos(4.6261 + 1256.61517 * t) + 
-      2060.6 * f64::cos(2.67823 + 628.307585 * t) * t - 994. - 
-      834. * f64::sin(2.1824 - 33.75705 * t);
-    t = t - (n / 10000000. - w) / 628.332 + 
-      (32. * (t + 1.8) * (t + 1.8) - 20.) / SECOND_PER_DAY as f64 / 36525.;
-    t * 36525. + ONE_THIRD
-  }
-
-  pub fn shuo_high(w: f64) -> f64 {
-    let mut t = Self::msa_lon_t2(w) * 36525.;
-    t = t - Self::dt_t(t) + ONE_THIRD;
-    let v = ((t + 0.5) % 1.) * SECOND_PER_DAY as f64;
-    if v < 1800. || v > SECOND_PER_DAY as f64 - 1800. {
-      t = Self::msa_lon_t(w) * 36525. - Self::dt_t(t) + ONE_THIRD;
-    }
-    t
-  }
-
-  pub fn shuo_low(w: f64) -> f64 {
-    let v = 7771.37714500204;
-    let mut t = (w + 1.08472) / v;
-    t = t - 
-      (-0.0000331 * t * t + 0.10976 * f64::cos(0.785 + 8328.6914 * t) + 
-      0.02224 * f64::cos(0.187 + 7214.0629 * t) - 
-      0.03342 * f64::cos(4.669 + 628.3076 * t)) / v + 
-      (32. * (t + 1.8) * (t + 1.8) - 20.) / SECOND_PER_DAY as f64 / 36525.;
-    t * 36525. + ONE_THIRD
-  }
-
-  pub fn calc_shuo(jd: f64) -> f64 {
-
-    if {
-      Self::__SB().lock().unwrap().len() < 1
-    } {
-      *Self::__SB().lock().unwrap() = ShouXingUtil::__decode("EqoFscDcrFpmEsF2DfFideFelFpFfFfFiaipqti1ksttikptikqckstekqttgkqttgkqteksttikptikq2fjstgjqttjkqttgkqtekstfkptikq2tijstgjiFkirFsAeACoFsiDaDiADc1AFbBfgdfikijFifegF1FhaikgFag1E2btaieeibggiffdeigFfqDfaiBkF1kEaikhkigeidhhdiegcFfakF1ggkidbiaedksaFffckekidhhdhdikcikiakicjF1deedFhFccgicdekgiFbiaikcfi1kbFibefgEgFdcFkFeFkdcfkF1kfkcickEiFkDacFiEfbiaejcFfffkhkdgkaiei1ehigikhdFikfckF1dhhdikcfgjikhfjicjicgiehdikcikggcifgiejF1jkieFhegikggcikFegiegkfjebhigikggcikdgkaFkijcfkcikfkcifikiggkaeeigefkcdfcfkhkdgkegieidhijcFfakhfgeidieidiegikhfkfckfcjbdehdikggikgkfkicjicjF1dbidikFiggcifgiejkiegkigcdiegfggcikdbgfgefjF1kfegikggcikdgFkeeijcfkcikfkekcikdgkabhkFikaffcfkhkdgkegbiaekfkiakicjhfgqdq2fkiakgkfkhfkfcjiekgFebicggbedF1jikejbbbiakgbgkacgiejkijjgigfiakggfggcibFifjefjF1kfekdgjcibFeFkijcfkfhkfkeaieigekgbhkfikidfcjeaibgekgdkiffiffkiakF1jhbakgdki1dj1ikfkicjicjieeFkgdkicggkighdF1jfgkgfgbdkicggfggkidFkiekgijkeigfiskiggfaidheigF1jekijcikickiggkidhhdbgcfkFikikhkigeidieFikggikhkffaffijhidhhakgdkhkijF1kiakF1kfheakgdkifiggkigicjiejkieedikgdfcggkigieeiejfgkgkigbgikicggkiaideeijkefjeijikhkiggkiaidheigcikaikffikijgkiahi1hhdikgjfifaakekighie1hiaikggikhkffakicjhiahaikggikhkijF1kfejfeFhidikggiffiggkigicjiekgieeigikggiffiggkidheigkgfjkeigiegikifiggkidhedeijcfkFikikhkiggkidhh1ehigcikaffkhkiggkidhh1hhigikekfiFkFikcidhh1hitcikggikhkfkicjicghiediaikggikhkijbjfejfeFhaikggifikiggkigiejkikgkgieeigikggiffiggkigieeigekijcijikggifikiggkideedeijkefkfckikhkiggkidhh1ehijcikaffkhkiggkidhh1hhigikhkikFikfckcidhh1hiaikgjikhfjicjicgiehdikcikggifikigiejfejkieFhegikggifikiggfghigkfjeijkhigikggifikiggkigieeijcijcikfksikifikiggkidehdeijcfdckikhkiggkhghh1ehijikifffffkhsFngErD1pAfBoDd1BlEtFqA2AqoEpDqElAEsEeB2BmADlDkqBtC1FnEpDqnEmFsFsAFnllBbFmDsDiCtDmAB2BmtCgpEplCpAEiBiEoFqFtEqsDcCnFtADnFlEgdkEgmEtEsCtDmADqFtAFrAtEcCqAE1BoFqC1F1DrFtBmFtAC2ACnFaoCgADcADcCcFfoFtDlAFgmFqBq2bpEoAEmkqnEeCtAE1bAEqgDfFfCrgEcBrACfAAABqAAB1AAClEnFeCtCgAADqDoBmtAAACbFiAAADsEtBqAB2FsDqpFqEmFsCeDtFlCeDtoEpClEqAAFrAFoCgFmFsFqEnAEcCqFeCtFtEnAEeFtAAEkFnErAABbFkADnAAeCtFeAfBoAEpFtAABtFqAApDcCGJ");
-    }
-    let size = Self::__SHUO_KB().len();
-    let mut d = 0.;
-    let pc = 14.;
-    let mut i = 0;
-    let jd = jd + solar::J2000() as f64;
-    let f1 = Self::__SHUO_KB()[0] - pc;
-    let f2 = Self::__SHUO_KB()[size - 1] - pc;
-    let f3 = 2436935.;
-    if jd < f1 || jd > f3 {
-      d = (Self::shuo_high(((jd + pc - 2451551.) / 29.5306).floor() * PI * 2.) + 0.5).floor();
-    } else if f1 <= jd && jd < f2 {
-      for _i in (0..size).step_by(2) {
-        i = _i;
-        if jd + pc < Self::__SHUO_KB()[i + 2] {
-          break;
+    pub fn e_lon(t: f64, n: i64) -> f64 {
+        let t = t / 10.;
+        let mut v = 0.;
+        let mut tn = 1.;
+        let pn = 1;
+        let m0 = Self::__XL0()[pn + 1] - Self::__XL0()[pn];
+        for i in 0..6 {
+            let n1 = Self::__XL0()[pn + i] as i64;
+            let n2 = Self::__XL0()[pn + 1 + i] as i64;
+            let n0 = n2 - n1;
+            if n0 == 0 {
+                continue;
+            }
+            let m = match n < 0 {
+                true => n2,
+                _ => {
+                    let mut _m = (3. * n as f64 * n0 as f64 / m0 + 0.5) as i64 + n1;
+                    if i != 0 {
+                        _m = _m + 3;
+                    }
+                    if _m > n2 {
+                        _m = n2;
+                    }
+                    _m
+                }
+            };
+            let mut c = 0.;
+            for j in (n1..m).step_by(3) {
+                c = c + Self::__XL0()[j as usize]
+                    * f64::cos(Self::__XL0()[j as usize + 1] + t * Self::__XL0()[j as usize + 2])
+            }
+            v = v + c * tn;
+            tn = tn * t;
         }
-      }
-      d = Self::__SHUO_KB()[i] + Self::__SHUO_KB()[i + 1]  * ((jd + pc - Self::__SHUO_KB()[i]) / Self::__SHUO_KB()[i + 1]).floor();
-      d = (d + 0.5).floor();
-      if d == 1683460. {
-        d = d + 1.;
-      }
-      d = d - solar::J2000() as f64;
-    } else if f2 <= jd && jd < f3 {
-      d = (Self::shuo_low(((jd + pc - 2451551.) / 29.5306).floor() * PI * 2.) + 0.5).floor();
-      let index = ((jd - f2) / 29.5306).floor() as usize;
-      let n = Self::__SB().lock().unwrap().slice_by_char_idx(index, index + 1);
-      if "1" == n {
-        d = d + 1.;
-      } else if "2" == n {
-        d = d - 1.;
-      }
+        v = v / Self::__XL0()[0];
+        let t2 = t * t;
+        let t3 = t2 * t;
+        v = v + (-0.0728 - 2.7702 * t - 1.1019 * t2 - 0.0996 * t3) / SECOND_PER_RAD;
+        v
     }
-    d
-  }
 
-  pub fn calc_qi(jd: f64) -> f64 {
-    if {
-      Self::__QB().lock().unwrap().len() < 1
-    } {
-      *Self::__QB().lock().unwrap() = ShouXingUtil::__decode("FrcFs22AFsckF2tsDtFqEtF1posFdFgiFseFtmelpsEfhkF2anmelpFlF1ikrotcnEqEq2FfqmcDsrFor22FgFrcgDscFs22FgEeFtE2sfFs22sCoEsaF2tsD1FpeE2eFsssEciFsFnmelpFcFhkF2tcnEqEpFgkrotcnEqrEtFermcDsrE222FgBmcmr22DaEfnaF222sD1FpeForeF2tssEfiFpEoeFssD1iFstEqFppDgFstcnEqEpFg11FscnEqrAoAF2ClAEsDmDtCtBaDlAFbAEpAAAAAD2FgBiBqoBbnBaBoAAAAAAAEgDqAdBqAFrBaBoACdAAf1AACgAAAeBbCamDgEifAE2AABa1C1BgFdiAAACoCeE1ADiEifDaAEqAAFe1AcFbcAAAAAF1iFaAAACpACmFmAAAAAAAACrDaAAADG0");
-    }
-    let size = Self::__QI_KB().len();
-    let mut d = 0.;
-    let pc = 7.;
-    let mut i = 0;
-    let jd = jd + solar::J2000() as f64;
-    let f1 = Self::__QI_KB()[0] - pc;
-    let f2 = Self::__QI_KB()[size - 1] - pc;
-    let f3 = 2436935.;
-    if jd < f1 || jd >= f3 {
-      // 2451259是1999.3.21，太阳视黄经为0，春分 定气计算
-      d = (Self::qi_high(((jd + pc - 2451259.) / 365.2422 * 24.).floor() * PI / 12.) + 0.5).floor();
-    } else if f1 <= jd && jd < f2 {
-      for _i in (0..size).step_by(2) {
-        i = _i;
-        if jd + pc < Self::__QI_KB()[i + 2] {
-          break;
+    pub fn m_lon(t: f64, n: i64) -> f64 {
+        let ob = Self::__XL1();
+        let obl = ob.len();
+        let mut v = 0.;
+        let mut tn = 1.;
+        let mut t2 = t * t;
+        let mut t3 = t2 * t;
+        let mut t4 = t3 * t;
+        let t5 = t4 * t;
+        let tx = t - 10.;
+        v = v
+            + (3.81034409 + 8399.684730072 * t - 3.319e-05 * t2 + 3.11e-08 * t3 - 2.033e-10 * t4)
+                * SECOND_PER_RAD;
+        v = v + 5028.792262 * t + 1.1124406 * t2 + 0.00007699 * t3
+            - 0.000023479 * t4
+            - 0.0000000178 * t5;
+
+        if tx > 0. {
+            v = v + -0.866 + 1.43 * tx + 0.054 * tx * tx;
         }
-      }
-      d = Self::__QI_KB()[i] + Self::__QI_KB()[i + 1] * ((jd + pc - Self::__QI_KB()[i]) / Self::__QI_KB()[i + 1]).floor();
-      d = (d + 0.5).floor();
-      if d == 1683460. {
-        d = d + 1.;
-      }
-      d = d - solar::J2000() as f64;
-    } else if f2 <= jd && jd < f3 {
-      d = (Self::qi_low(((jd + pc - 2451259.) / 365.2422 * 24.).floor() * PI / 12.) + 0.5).floor();
-      // 找定气修正值
-      let index = ((jd - f2) / 365.2422 * 24.).floor() as usize;
-      let n = Self::__QB().lock().unwrap().slice_by_char_idx(index, index + 1);
-      if "1" == n {
-        d = d + 1.;
-      } else if "2" == n {
-        d = d - 1.;
-      }
-    }
-    d
-  }
 
-  pub fn qi_accurate(w: f64) -> f64 {
-    let t = Self::sa_lon_t(w) * 36525.;
-    let v = t - Self::dt_t(t) + ONE_THIRD;
-    v
-  }
+        t2 = t2 / 1e4;
+        t3 = t3 / 1e8;
+        t4 = t4 / 1e8;
 
-  pub fn qi_accurate2(jd: f64) -> f64 {
-    let d = PI / 12.;
-    let w = ((jd + 293.) / 365.2422 * 24.).floor() * d;
-    let a = Self::qi_accurate(w);
-    if a - jd > 5. {
-      return Self::qi_accurate(w - d);
+        let mut n = n * 6;
+        if n < 0 {
+            n = obl as i64;
+        }
+
+        for i in 0..ob.len() {
+            let f = &ob[i];
+            let size = f.len();
+            let mut m = ((n * size as i64) as f64 / obl as f64 + 0.5) as i64;
+            if i > 0 {
+                m = m + 6;
+            }
+            if m >= size as i64 {
+                m = size as i64;
+            }
+            let mut c = 0.;
+            for j in (0..m).step_by(6) {
+                c = c + f[j as usize]
+                    * f64::cos(
+                        f[j as usize + 1]
+                            + t * f[j as usize + 2]
+                            + t2 * f[j as usize + 3]
+                            + t3 * f[j as usize + 4]
+                            + t4 * f[j as usize + 5],
+                    );
+            }
+            v = v + c * tn;
+            tn = tn * t;
+        }
+        v = v / SECOND_PER_RAD;
+        v
     }
-    if a - jd < -5. {
-      return Self::qi_accurate(w + d);
+
+    pub fn gxc_sun_lon(t: f64) -> f64 {
+        let v = -0.043126 + 628.301955 * t - 0.000002732 * t * t;
+        let e = 0.016708634 - 0.000042037 * t - 0.0000001267 * t * t;
+        -20.49552 * (1. + e * f64::cos(v)) / SECOND_PER_RAD
     }
-    a
-  }
+
+    pub fn ev(t: f64) -> f64 {
+        let f = 628.307585 * t;
+        628.332
+            + 21. * f64::sin(1.527 + f)
+            + 0.44 * f64::sin(1.48 + f * 2.)
+            + 0.129 * f64::sin(5.82 + f) * t
+            + 0.00055 * f64::sin(4.21 + f) * t * t
+    }
+
+    pub fn mv(t: f64) -> f64 {
+        let mut v = 8399.71 - 914. * f64::sin(0.7848 + 8328.691425 * t + 0.0001523 * t * t);
+        v = v - 179. * f64::sin(2.543 + 15542.7543 * t)
+            + 160. * f64::sin(0.1874 + 7214.0629 * t)
+            + 62. * f64::sin(3.14 + 16657.3828 * t)
+            + 34. * f64::sin(4.827 + 16866.9323 * t)
+            + 22. * f64::sin(4.9 + 23871.4457 * t)
+            + 12. * f64::sin(2.59 + 14914.4523 * t)
+            + 7. * f64::sin(0.23 + 6585.7609 * t)
+            + 5. * f64::sin(0.9 + 25195.624 * t)
+            + 5. * f64::sin(2.32 - 7700.3895 * t)
+            + 5. * f64::sin(3.88 + 8956.9934 * t)
+            + 5. * f64::sin(0.49 + 7771.3771 * t);
+        v
+    }
+
+    pub fn sa_lon(t: f64, n: i64) -> f64 {
+        let acc = [
+            Self::e_lon(t, n),
+            Self::nutationLon2(t),
+            Self::gxc_sun_lon(t),
+            PI,
+        ];
+        acc.iter().sum()
+    }
+
+    pub fn dt_ext(y: f64, jsd: f64) -> f64 {
+        let dy = (y - 1820.) * 1.0 / 100.;
+        -20. + jsd * dy * dy
+    }
+
+    pub fn dt_calc(y: f64) -> f64 {
+        let size = Self::__DT_AT().len();
+        let y0 = Self::__DT_AT()[size - 2];
+        let t0 = Self::__DT_AT()[size - 1];
+        if y >= y0 {
+            let jsd = 31.;
+            if y > y0 + 100. {
+                let r = Self::dt_ext(y, jsd);
+                return r;
+            }
+            let v = Self::dt_ext(y, jsd);
+            let dv = Self::dt_ext(y0, jsd) - t0;
+            let r = v - dv * (y0 + 100. - y) / 100.;
+            return r;
+        }
+        let mut i = 0;
+        for _i in (0..size).step_by(5) {
+            i = _i;
+            if y < Self::__DT_AT()[i + 5] {
+                break;
+            }
+        }
+        let t1 = (y - Self::__DT_AT()[i]) / (Self::__DT_AT()[i + 5] - Self::__DT_AT()[i]) * 10.;
+        let t2 = t1 * t1;
+        let t3 = t2 * t1;
+
+        let r = Self::__DT_AT()[i + 1]
+            + Self::__DT_AT()[i + 2] * t1
+            + Self::__DT_AT()[i + 3] * t2
+            + Self::__DT_AT()[i + 4] * t3;
+
+        r
+    }
+
+    pub fn dt_t(t: f64) -> f64 {
+        Self::dt_calc(t / 365.2425 + 2000.) / SECOND_PER_DAY as f64
+    }
+
+    pub fn sa_lon_t(w: f64) -> f64 {
+        let mut v = 628.3319653318;
+        let mut t = (w - 1.75347 - PI) / v;
+        v = Self::ev(t);
+        t = t + (w - Self::sa_lon(t, 10)) / v;
+        v = Self::ev(t);
+        t = t + (w - Self::sa_lon(t, -1)) / v;
+        t
+    }
+
+    pub fn msa_lon(t: f64, mn: i64, sn: i64) -> f64 {
+        Self::m_lon(t, mn) + (-3.4E-6) - (Self::e_lon(t, sn) + Self::gxc_sun_lon(t) + PI)
+    }
+
+    pub fn msa_lon_t(w: f64) -> f64 {
+        let mut v = 7771.37714500204;
+        let mut t = (w + 1.08472) / v;
+        t = t + (w - Self::msa_lon(t, 3, 3)) / v;
+        v = Self::mv(t) - Self::ev(t);
+        t = t + (w - Self::msa_lon(t, 20, 10)) / v;
+        t = t + (w - Self::msa_lon(t, -1, 60)) / v;
+        t
+    }
+
+    pub fn sa_lon_t2(w: f64) -> f64 {
+        let v = 628.3319653318;
+        let mut t = (w - 1.75347 - PI) / v;
+        t = t
+            - (0.000005297 * t * t
+                + 0.0334166 * f64::cos(4.669257 + 628.307585 * t)
+                + 0.0002061 * f64::cos(2.67823 + 628.307585 * t) * t)
+                / v;
+        t = t
+            + (w - Self::e_lon(t, 8) - PI
+                + (20.5 + 17.2 * f64::sin(2.1824 - 33.75705 * t)) / SECOND_PER_RAD)
+                / v;
+        t
+    }
+
+    pub fn msa_lon_t2(w: f64) -> f64 {
+        let mut v = 7771.37714500204;
+        let mut t = (w + 1.08472) / v;
+        let mut t2 = t * t;
+        t = t
+            - (-0.00003309 * t2
+                + 0.10976 * f64::cos(0.784758 + 8328.6914246 * t + 0.000152292 * t2)
+                + 0.02224 * f64::cos(0.18740 + 7214.0628654 * t - 0.00021848 * t2)
+                - 0.03342 * f64::cos(4.669257 + 628.307585 * t))
+                / v;
+        t2 = t * t;
+        let n = Self::m_lon(t, 20)
+            - (4.8950632
+                + 628.3319653318 * t
+                + 0.000005297 * t2
+                + 0.0334166 * f64::cos(4.669257 + 628.307585 * t)
+                + 0.0002061 * f64::cos(2.67823 + 628.307585 * t) * t
+                + 0.000349 * f64::cos(4.6261 + 1256.61517 * t)
+                - 20.5 / SECOND_PER_RAD);
+        v = 7771.38
+            - 914. * f64::sin(0.7848 + 8328.691425 * t + 0.0001523 * t2)
+            - 179. * f64::sin(2.543 + 15542.7543 * t)
+            - 160. * f64::sin(0.1874 + 7214.0629 * t);
+        t = t + (w - n) / v;
+        t
+    }
+
+    pub fn qi_high(w: f64) -> f64 {
+        let mut t = Self::sa_lon_t2(w) * 36525.;
+        t = t - Self::dt_t(t) + ONE_THIRD;
+        let v = ((t + 0.5) % 1.) * SECOND_PER_DAY as f64;
+        if v < 1200. || v > SECOND_PER_DAY as f64 - 1200. {
+            t = Self::sa_lon_t(w) * 36525. - Self::dt_t(t) + ONE_THIRD;
+        }
+        t
+    }
+
+    pub fn qi_low(w: f64) -> f64 {
+        let v = 628.3319653318;
+        let mut t = (w - 4.895062166) / v;
+        t = t
+            - (53. * t * t
+                + 334116. * f64::cos(4.67 + 628.307585 * t)
+                + 2061. * f64::cos(2.678 + 628.3076 * t) * t)
+                / v
+                / 10000000.;
+        let n = 48950621.66
+            + 6283319653.318 * t
+            + 53. * t * t
+            + 334166. * f64::cos(4.669257 + 628.307585 * t)
+            + 3489. * f64::cos(4.6261 + 1256.61517 * t)
+            + 2060.6 * f64::cos(2.67823 + 628.307585 * t) * t
+            - 994.
+            - 834. * f64::sin(2.1824 - 33.75705 * t);
+        t = t - (n / 10000000. - w) / 628.332
+            + (32. * (t + 1.8) * (t + 1.8) - 20.) / SECOND_PER_DAY as f64 / 36525.;
+        t * 36525. + ONE_THIRD
+    }
+
+    pub fn shuo_high(w: f64) -> f64 {
+        let mut t = Self::msa_lon_t2(w) * 36525.;
+        t = t - Self::dt_t(t) + ONE_THIRD;
+        let v = ((t + 0.5) % 1.) * SECOND_PER_DAY as f64;
+        if v < 1800. || v > SECOND_PER_DAY as f64 - 1800. {
+            t = Self::msa_lon_t(w) * 36525. - Self::dt_t(t) + ONE_THIRD;
+        }
+        t
+    }
+
+    pub fn shuo_low(w: f64) -> f64 {
+        let v = 7771.37714500204;
+        let mut t = (w + 1.08472) / v;
+        t = t
+            - (-0.0000331 * t * t
+                + 0.10976 * f64::cos(0.785 + 8328.6914 * t)
+                + 0.02224 * f64::cos(0.187 + 7214.0629 * t)
+                - 0.03342 * f64::cos(4.669 + 628.3076 * t))
+                / v
+            + (32. * (t + 1.8) * (t + 1.8) - 20.) / SECOND_PER_DAY as f64 / 36525.;
+        t * 36525. + ONE_THIRD
+    }
+
+    pub fn calc_shuo(jd: f64) -> f64 {
+        if Self::__SB().lock().unwrap().len() < 1 {
+            *Self::__SB().lock().unwrap() = ShouXingUtil::__decode(
+                "EqoFscDcrFpmEsF2DfFideFelFpFfFfFiaipqti1ksttikptikqckstekqttgkqttgkqteksttikptikq2fjstgjqttjkqttgkqtekstfkptikq2tijstgjiFkirFsAeACoFsiDaDiADc1AFbBfgdfikijFifegF1FhaikgFag1E2btaieeibggiffdeigFfqDfaiBkF1kEaikhkigeidhhdiegcFfakF1ggkidbiaedksaFffckekidhhdhdikcikiakicjF1deedFhFccgicdekgiFbiaikcfi1kbFibefgEgFdcFkFeFkdcfkF1kfkcickEiFkDacFiEfbiaejcFfffkhkdgkaiei1ehigikhdFikfckF1dhhdikcfgjikhfjicjicgiehdikcikggcifgiejF1jkieFhegikggcikFegiegkfjebhigikggcikdgkaFkijcfkcikfkcifikiggkaeeigefkcdfcfkhkdgkegieidhijcFfakhfgeidieidiegikhfkfckfcjbdehdikggikgkfkicjicjF1dbidikFiggcifgiejkiegkigcdiegfggcikdbgfgefjF1kfegikggcikdgFkeeijcfkcikfkekcikdgkabhkFikaffcfkhkdgkegbiaekfkiakicjhfgqdq2fkiakgkfkhfkfcjiekgFebicggbedF1jikejbbbiakgbgkacgiejkijjgigfiakggfggcibFifjefjF1kfekdgjcibFeFkijcfkfhkfkeaieigekgbhkfikidfcjeaibgekgdkiffiffkiakF1jhbakgdki1dj1ikfkicjicjieeFkgdkicggkighdF1jfgkgfgbdkicggfggkidFkiekgijkeigfiskiggfaidheigF1jekijcikickiggkidhhdbgcfkFikikhkigeidieFikggikhkffaffijhidhhakgdkhkijF1kiakF1kfheakgdkifiggkigicjiejkieedikgdfcggkigieeiejfgkgkigbgikicggkiaideeijkefjeijikhkiggkiaidheigcikaikffikijgkiahi1hhdikgjfifaakekighie1hiaikggikhkffakicjhiahaikggikhkijF1kfejfeFhidikggiffiggkigicjiekgieeigikggiffiggkidheigkgfjkeigiegikifiggkidhedeijcfkFikikhkiggkidhh1ehigcikaffkhkiggkidhh1hhigikekfiFkFikcidhh1hitcikggikhkfkicjicghiediaikggikhkijbjfejfeFhaikggifikiggkigiejkikgkgieeigikggiffiggkigieeigekijcijikggifikiggkideedeijkefkfckikhkiggkidhh1ehijcikaffkhkiggkidhh1hhigikhkikFikfckcidhh1hiaikgjikhfjicjicgiehdikcikggifikigiejfejkieFhegikggifikiggfghigkfjeijkhigikggifikiggkigieeijcijcikfksikifikiggkidehdeijcfdckikhkiggkhghh1ehijikifffffkhsFngErD1pAfBoDd1BlEtFqA2AqoEpDqElAEsEeB2BmADlDkqBtC1FnEpDqnEmFsFsAFnllBbFmDsDiCtDmAB2BmtCgpEplCpAEiBiEoFqFtEqsDcCnFtADnFlEgdkEgmEtEsCtDmADqFtAFrAtEcCqAE1BoFqC1F1DrFtBmFtAC2ACnFaoCgADcADcCcFfoFtDlAFgmFqBq2bpEoAEmkqnEeCtAE1bAEqgDfFfCrgEcBrACfAAABqAAB1AAClEnFeCtCgAADqDoBmtAAACbFiAAADsEtBqAB2FsDqpFqEmFsCeDtFlCeDtoEpClEqAAFrAFoCgFmFsFqEnAEcCqFeCtFtEnAEeFtAAEkFnErAABbFkADnAAeCtFeAfBoAEpFtAABtFqAApDcCGJ",
+            );
+        }
+        let size = Self::__SHUO_KB().len();
+        let mut d = 0.;
+        let pc = 14.;
+        let mut i = 0;
+        let jd = jd + solar::J2000() as f64;
+        let f1 = Self::__SHUO_KB()[0] - pc;
+        let f2 = Self::__SHUO_KB()[size - 1] - pc;
+        let f3 = 2436935.;
+        if jd < f1 || jd > f3 {
+            d = (Self::shuo_high(((jd + pc - 2451551.) / 29.5306).floor() * PI * 2.) + 0.5).floor();
+        } else if f1 <= jd && jd < f2 {
+            for _i in (0..size).step_by(2) {
+                i = _i;
+                if jd + pc < Self::__SHUO_KB()[i + 2] {
+                    break;
+                }
+            }
+            d = Self::__SHUO_KB()[i]
+                + Self::__SHUO_KB()[i + 1]
+                    * ((jd + pc - Self::__SHUO_KB()[i]) / Self::__SHUO_KB()[i + 1]).floor();
+            d = (d + 0.5).floor();
+            if d == 1683460. {
+                d = d + 1.;
+            }
+            d = d - solar::J2000() as f64;
+        } else if f2 <= jd && jd < f3 {
+            d = (Self::shuo_low(((jd + pc - 2451551.) / 29.5306).floor() * PI * 2.) + 0.5).floor();
+            let index = ((jd - f2) / 29.5306).floor() as usize;
+            let n = Self::__SB()
+                .lock()
+                .unwrap()
+                .slice_by_char_idx(index, index + 1);
+            if "1" == n {
+                d = d + 1.;
+            } else if "2" == n {
+                d = d - 1.;
+            }
+        }
+        d
+    }
+
+    pub fn calc_qi(jd: f64) -> f64 {
+        if Self::__QB().lock().unwrap().len() < 1 {
+            *Self::__QB().lock().unwrap() = ShouXingUtil::__decode(
+                "FrcFs22AFsckF2tsDtFqEtF1posFdFgiFseFtmelpsEfhkF2anmelpFlF1ikrotcnEqEq2FfqmcDsrFor22FgFrcgDscFs22FgEeFtE2sfFs22sCoEsaF2tsD1FpeE2eFsssEciFsFnmelpFcFhkF2tcnEqEpFgkrotcnEqrEtFermcDsrE222FgBmcmr22DaEfnaF222sD1FpeForeF2tssEfiFpEoeFssD1iFstEqFppDgFstcnEqEpFg11FscnEqrAoAF2ClAEsDmDtCtBaDlAFbAEpAAAAAD2FgBiBqoBbnBaBoAAAAAAAEgDqAdBqAFrBaBoACdAAf1AACgAAAeBbCamDgEifAE2AABa1C1BgFdiAAACoCeE1ADiEifDaAEqAAFe1AcFbcAAAAAF1iFaAAACpACmFmAAAAAAAACrDaAAADG0",
+            );
+        }
+        let size = Self::__QI_KB().len();
+        let mut d = 0.;
+        let pc = 7.;
+        let mut i = 0;
+        let jd = jd + solar::J2000() as f64;
+        let f1 = Self::__QI_KB()[0] - pc;
+        let f2 = Self::__QI_KB()[size - 1] - pc;
+        let f3 = 2436935.;
+        if jd < f1 || jd >= f3 {
+            // 2451259是1999.3.21，太阳视黄经为0，春分 定气计算
+            d = (Self::qi_high(((jd + pc - 2451259.) / 365.2422 * 24.).floor() * PI / 12.) + 0.5)
+                .floor();
+        } else if f1 <= jd && jd < f2 {
+            for _i in (0..size).step_by(2) {
+                i = _i;
+                if jd + pc < Self::__QI_KB()[i + 2] {
+                    break;
+                }
+            }
+            d = Self::__QI_KB()[i]
+                + Self::__QI_KB()[i + 1]
+                    * ((jd + pc - Self::__QI_KB()[i]) / Self::__QI_KB()[i + 1]).floor();
+            d = (d + 0.5).floor();
+            if d == 1683460. {
+                d = d + 1.;
+            }
+            d = d - solar::J2000() as f64;
+        } else if f2 <= jd && jd < f3 {
+            d = (Self::qi_low(((jd + pc - 2451259.) / 365.2422 * 24.).floor() * PI / 12.) + 0.5)
+                .floor();
+            // 找定气修正值
+            let index = ((jd - f2) / 365.2422 * 24.).floor() as usize;
+            let n = Self::__QB()
+                .lock()
+                .unwrap()
+                .slice_by_char_idx(index, index + 1);
+            if "1" == n {
+                d = d + 1.;
+            } else if "2" == n {
+                d = d - 1.;
+            }
+        }
+        d
+    }
+
+    pub fn qi_accurate(w: f64) -> f64 {
+        let t = Self::sa_lon_t(w) * 36525.;
+        let v = t - Self::dt_t(t) + ONE_THIRD;
+        v
+    }
+
+    pub fn qi_accurate2(jd: f64) -> f64 {
+        let d = PI / 12.;
+        let w = ((jd + 293.) / 365.2422 * 24.).floor() * d;
+        let a = Self::qi_accurate(w);
+        if a - jd > 5. {
+            return Self::qi_accurate(w - d);
+        }
+        if a - jd < -5. {
+            return Self::qi_accurate(w + d);
+        }
+        a
+    }
 }
 
 impl ShouXingUtil {
-  fn __decode(s: &str) -> String {
-    let s = s.to_string();
-    let o = "0000000000".to_string();
-    let o2 = format!("{o}{o}");
-    s
-      .replace("J", "00")
-      .replace("I", "000")
-      .replace("H", "0000")
-      .replace("G", "00000")
-      .replace("t", "02")
-      .replace("s", "002")
-      .replace("r", "0002")
-      .replace("q", "00002")
-      .replace("p", "000002")
-      .replace("o", "0000002")
-      .replace("n", "00000002")
-      .replace("m", "000000002")
-      .replace("l", "0000000002")
-      .replace("k", "01")
-      .replace("j", "0101")
-      .replace("i", "001")
-      .replace("h", "001001")
-      .replace("g", "0001")
-      .replace("f", "00001")
-      .replace("e", "000001")
-      .replace("d", "0000001")
-      .replace("c", "00000001")
-      .replace("b", "000000001")
-      .replace("a", "0000000001")
-      .replace("A", &format!("{}{}{}", o2, o2, o2))
-      .replace("B", &format!("{}{}{}", o2, o2, o))
-      .replace("C", &format!("{}{}", o2, o2))
-      .replace("D", &format!("{}{}", o2, o))
-      .replace("E", &o2)
-      .replace("F", &o)
-  }
+    fn __decode(s: &str) -> String {
+        let s = s.to_string();
+        let o = "0000000000".to_string();
+        let o2 = format!("{o}{o}");
+        s.replace("J", "00")
+            .replace("I", "000")
+            .replace("H", "0000")
+            .replace("G", "00000")
+            .replace("t", "02")
+            .replace("s", "002")
+            .replace("r", "0002")
+            .replace("q", "00002")
+            .replace("p", "000002")
+            .replace("o", "0000002")
+            .replace("n", "00000002")
+            .replace("m", "000000002")
+            .replace("l", "0000000002")
+            .replace("k", "01")
+            .replace("j", "0101")
+            .replace("i", "001")
+            .replace("h", "001001")
+            .replace("g", "0001")
+            .replace("f", "00001")
+            .replace("e", "000001")
+            .replace("d", "0000001")
+            .replace("c", "00000001")
+            .replace("b", "000000001")
+            .replace("a", "0000000001")
+            .replace("A", &format!("{}{}{}", o2, o2, o2))
+            .replace("B", &format!("{}{}{}", o2, o2, o))
+            .replace("C", &format!("{}{}", o2, o2))
+            .replace("D", &format!("{}{}", o2, o))
+            .replace("E", &o2)
+            .replace("F", &o)
+    }
 }
 
 const PI: f64 = 3.141592653589793;
@@ -497,59 +497,130 @@ const ONE_THIRD: f64 = 1.0 / 3.0;
 const SECOND_PER_DAY: i64 = 86400;
 const SECOND_PER_RAD: f64 = 648000. / PI;
 
-
-
 impl ShouXingUtil {
-  // 619-01-21开始16598个朔日修正表 d0=1947168
-  __static_funk!(__SB, Arc<Mutex<String>>, Arc::new(Mutex::new("".to_string())));
-  // 1645-09-23开始7567个节气修正表
-  __static_funk!(__QB, Arc<Mutex<String>>, Arc::new(Mutex::new("".to_string())));
+    // 619-01-21开始16598个朔日修正表 d0=1947168
+    __static_funk!(
+        __SB,
+        Arc<Mutex<String>>,
+        Arc::new(Mutex::new("".to_string()))
+    );
+    // 1645-09-23开始7567个节气修正表
+    __static_funk!(
+        __QB,
+        Arc<Mutex<String>>,
+        Arc::new(Mutex::new("".to_string()))
+    );
 
-  __static_funk!(__SHUO_KB, Vec<f64>, vec![
-    1457698.231017, 29.53067166, 1546082.512234, 29.53085106, 1640640.735300, 29.53060000, 1642472.151543, 29.53085439, 1683430.509300, 29.53086148, 1752148.041079, 29.53085097, 1807665.420323, 29.53059851, 1883618.114100, 29.53060000, 1907360.704700, 29.53060000, 1936596.224900, 29.53060000, 1939135.675300, 29.53060000, 1947168.00
-  ]);
+    __static_funk!(
+        __SHUO_KB,
+        Vec<f64>,
+        vec![
+            1457698.231017,
+            29.53067166,
+            1546082.512234,
+            29.53085106,
+            1640640.735300,
+            29.53060000,
+            1642472.151543,
+            29.53085439,
+            1683430.509300,
+            29.53086148,
+            1752148.041079,
+            29.53085097,
+            1807665.420323,
+            29.53059851,
+            1883618.114100,
+            29.53060000,
+            1907360.704700,
+            29.53060000,
+            1936596.224900,
+            29.53060000,
+            1939135.675300,
+            29.53060000,
+            1947168.00
+        ]
+    );
 
-  __static_funk!(__QI_KB, Vec<f64>, vec![
-    1640650.479938, 15.21842500,  // -221-11-09 h=0.01709 古历·秦汉
-    1642476.703182, 15.21874996,  // -216-11-09 h=0.01557 古历·秦汉
-    1683430.515601, 15.218750011,  // -104-12-25 h=0.01560 汉书·律历志(太初历)平气平朔 回归年=365.25000
-    1752157.640664, 15.218749978,  // 85-02-23 h=0.01559 后汉书·律历志(四分历) 回归年=365.25000
-    1807675.003759, 15.218620279,  // 237-02-22 h=0.00010 晋书·律历志(景初历) 回归年=365.24689
-    1883627.765182, 15.218612292,  // 445-02-03 h=0.00026 宋书·律历志(何承天元嘉历) 回归年=365.24670
-    1907369.128100, 15.218449176,  // 510-02-03 h=0.00027 宋书·律历志(祖冲之大明历) 回归年=365.24278
-    1936603.140413, 15.218425000,  // 590-02-17 h=0.00149 随书·律历志(开皇历) 回归年=365.24220
-    1939145.524180, 15.218466998,  // 597-02-03 h=0.00121 随书·律历志(大业历) 回归年=365.24321
-    1947180.798300, 15.218524844,  // 619-02-03 h=0.00052 新唐书·历志(戊寅元历)平气定朔 回归年=365.24460
-    1964362.041824, 15.218533526,  // 666-02-17 h=0.00059 新唐书·历志(麟德历) 回归年=365.24480
-    1987372.340971, 15.218513908,  // 729-02-16 h=0.00096 新唐书·历志(大衍历,至德历) 回归年=365.24433
-    1999653.819126, 15.218530782,  // 762-10-03 h=0.00093 新唐书·历志(五纪历) 回归年=365.24474
-    2007445.469786, 15.218535181,  // 784-02-01 h=0.00059 新唐书·历志(正元历,观象历) 回归年=365.24484
-    2021324.917146, 15.218526248,  // 822-02-01 h=0.00022 新唐书·历志(宣明历) 回归年=365.24463
-    2047257.232342, 15.218519654,  // 893-01-31 h=0.00015 新唐书·历志(崇玄历) 回归年=365.24447
-    2070282.898213, 15.218425000,  // 956-02-16 h=0.00149 旧五代·历志(钦天历) 回归年=365.24220
-    2073204.872850, 15.218515221,  // 964-02-16 h=0.00166 宋史·律历志(应天历) 回归年=365.24437
-    2080144.500926, 15.218530782,  // 983-02-16 h=0.00093 宋史·律历志(乾元历) 回归年=365.24474
-    2086703.688963, 15.218523776,  // 1001-01-31 h=0.00067 宋史·律历志(仪天历,崇天历) 回归年=365.24457
-    2110033.182763, 15.218425000,  // 1064-12-15 h=0.00669 宋史·律历志(明天历) 回归年=365.24220
-    2111190.300888, 15.218425000,  // 1068-02-15 h=0.00149 宋史·律历志(崇天历) 回归年=365.24220
-    2113731.271005, 15.218515671,  // 1075-01-30 h=0.00038 李锐补修(奉元历) 回归年=365.24438
-    2120670.840263, 15.218425000,  // 1094-01-30 h=0.00149 宋史·律历志 回归年=365.24220
-    2123973.309063, 15.218425000,  // 1103-02-14 h=0.00669 李锐补修(占天历) 回归年=365.24220
-    2125068.997336, 15.218477932,  // 1106-02-14 h=0.00056 宋史·律历志(纪元历) 回归年=365.24347
-    2136026.312633, 15.218472436,  // 1136-02-14 h=0.00088 宋史·律历志(统元历,乾道历,淳熙历) 回归年=365.24334
-    2156099.495538, 15.218425000,  // 1191-01-29 h=0.00149 宋史·律历志(会元历) 回归年=365.24220
-    2159021.324663, 15.218425000,  // 1199-01-29 h=0.00149 宋史·律历志(统天历) 回归年=365.24220
-    2162308.575254, 15.218461742,  // 1208-01-30 h=0.00146 宋史·律历志(开禧历) 回归年=365.24308
-    2178485.706538, 15.218425000,  // 1252-05-15 h=0.04606 淳祐历 回归年=365.24220
-    2178759.662849, 15.218445786,  // 1253-02-13 h=0.00231 会天历 回归年=365.24270
-    2185334.020800, 15.218425000,  // 1271-02-13 h=0.00520 宋史·律历志(成天历) 回归年=365.24220
-    2187525.481425, 15.218425000,  // 1277-02-12 h=0.00520 本天历 回归年=365.24220
-    2188621.191481, 15.218437494,  // 1280-02-13 h=0.00015 元史·历志(郭守敬授时历) 回归年=365.24250
-    2322147.76  // 1645-09-21  
-  ]);
+    __static_funk!(
+        __QI_KB,
+        Vec<f64>,
+        vec![
+            1640650.479938,
+            15.21842500, // -221-11-09 h=0.01709 古历·秦汉
+            1642476.703182,
+            15.21874996, // -216-11-09 h=0.01557 古历·秦汉
+            1683430.515601,
+            15.218750011, // -104-12-25 h=0.01560 汉书·律历志(太初历)平气平朔 回归年=365.25000
+            1752157.640664,
+            15.218749978, // 85-02-23 h=0.01559 后汉书·律历志(四分历) 回归年=365.25000
+            1807675.003759,
+            15.218620279, // 237-02-22 h=0.00010 晋书·律历志(景初历) 回归年=365.24689
+            1883627.765182,
+            15.218612292, // 445-02-03 h=0.00026 宋书·律历志(何承天元嘉历) 回归年=365.24670
+            1907369.128100,
+            15.218449176, // 510-02-03 h=0.00027 宋书·律历志(祖冲之大明历) 回归年=365.24278
+            1936603.140413,
+            15.218425000, // 590-02-17 h=0.00149 随书·律历志(开皇历) 回归年=365.24220
+            1939145.524180,
+            15.218466998, // 597-02-03 h=0.00121 随书·律历志(大业历) 回归年=365.24321
+            1947180.798300,
+            15.218524844, // 619-02-03 h=0.00052 新唐书·历志(戊寅元历)平气定朔 回归年=365.24460
+            1964362.041824,
+            15.218533526, // 666-02-17 h=0.00059 新唐书·历志(麟德历) 回归年=365.24480
+            1987372.340971,
+            15.218513908, // 729-02-16 h=0.00096 新唐书·历志(大衍历,至德历) 回归年=365.24433
+            1999653.819126,
+            15.218530782, // 762-10-03 h=0.00093 新唐书·历志(五纪历) 回归年=365.24474
+            2007445.469786,
+            15.218535181, // 784-02-01 h=0.00059 新唐书·历志(正元历,观象历) 回归年=365.24484
+            2021324.917146,
+            15.218526248, // 822-02-01 h=0.00022 新唐书·历志(宣明历) 回归年=365.24463
+            2047257.232342,
+            15.218519654, // 893-01-31 h=0.00015 新唐书·历志(崇玄历) 回归年=365.24447
+            2070282.898213,
+            15.218425000, // 956-02-16 h=0.00149 旧五代·历志(钦天历) 回归年=365.24220
+            2073204.872850,
+            15.218515221, // 964-02-16 h=0.00166 宋史·律历志(应天历) 回归年=365.24437
+            2080144.500926,
+            15.218530782, // 983-02-16 h=0.00093 宋史·律历志(乾元历) 回归年=365.24474
+            2086703.688963,
+            15.218523776, // 1001-01-31 h=0.00067 宋史·律历志(仪天历,崇天历) 回归年=365.24457
+            2110033.182763,
+            15.218425000, // 1064-12-15 h=0.00669 宋史·律历志(明天历) 回归年=365.24220
+            2111190.300888,
+            15.218425000, // 1068-02-15 h=0.00149 宋史·律历志(崇天历) 回归年=365.24220
+            2113731.271005,
+            15.218515671, // 1075-01-30 h=0.00038 李锐补修(奉元历) 回归年=365.24438
+            2120670.840263,
+            15.218425000, // 1094-01-30 h=0.00149 宋史·律历志 回归年=365.24220
+            2123973.309063,
+            15.218425000, // 1103-02-14 h=0.00669 李锐补修(占天历) 回归年=365.24220
+            2125068.997336,
+            15.218477932, // 1106-02-14 h=0.00056 宋史·律历志(纪元历) 回归年=365.24347
+            2136026.312633,
+            15.218472436, // 1136-02-14 h=0.00088 宋史·律历志(统元历,乾道历,淳熙历) 回归年=365.24334
+            2156099.495538,
+            15.218425000, // 1191-01-29 h=0.00149 宋史·律历志(会元历) 回归年=365.24220
+            2159021.324663,
+            15.218425000, // 1199-01-29 h=0.00149 宋史·律历志(统天历) 回归年=365.24220
+            2162308.575254,
+            15.218461742, // 1208-01-30 h=0.00146 宋史·律历志(开禧历) 回归年=365.24308
+            2178485.706538,
+            15.218425000, // 1252-05-15 h=0.04606 淳祐历 回归年=365.24220
+            2178759.662849,
+            15.218445786, // 1253-02-13 h=0.00231 会天历 回归年=365.24270
+            2185334.020800,
+            15.218425000, // 1271-02-13 h=0.00520 宋史·律历志(成天历) 回归年=365.24220
+            2187525.481425,
+            15.218425000, // 1277-02-12 h=0.00520 本天历 回归年=365.24220
+            2188621.191481,
+            15.218437494, // 1280-02-13 h=0.00015 元史·历志(郭守敬授时历) 回归年=365.24250
+            2322147.76    // 1645-09-21
+        ]
+    );
 
-  __static_funk!(__XL0, Vec<f64>, {
-    "
+    __static_funk!(__XL0, Vec<f64>, {
+        "
     10000000000.,
     20., 578., 920., 1100., 1124., 1136., 1148., 1217., 1226., 1229., 1229., 1229., 1229., 1937., 2363., 2618., 2633., 2660., 2666.,
     17534704567., 0.00000000000, 0.00000000000, 334165646., 4.669256804, 6283.075849991, 3489428., 4.6261024,
@@ -738,14 +809,14 @@ impl ShouXingUtil {
     161000.69, 1, 3.82, 149854.40, 1, 4.08, 6127.66, 1, 5.26, 6438.50,
     9, 1.22, 6283.08, 1, 0.66, 12566.15"
       .split(",")
-      .map(|v| 
+      .map(|v|
         v.trim().parse::<f64>().unwrap()
       )
       .collect::<Vec<_>>()
-  });
+    });
 
-  __static_funk!(__XL1, Vec<Vec<f64>>, {
-    vec![
+    __static_funk!(__XL1, Vec<Vec<f64>>, {
+        vec![
       "22639.586, 0.78475822, 8328.691424623, 1.5229241, 25.0719, -0.123598, 4586.438, 0.1873974, 7214.06286536, -2.184756, -18.860, 0.08280, 2369.914, 2.5429520, 15542.75428998, -0.661832, 6.212, -0.04080, 769.026, 3.140313, 16657.38284925, 3.04585, 50.144, -0.2472, 666.418, 1.527671, 628.30195521, -0.02664, 0.062, -0.0054, 411.596, 4.826607, 16866.9323150, -1.28012, -1.07, -0.0059, 211.656, 4.115028, -1114.6285593, -3.70768, -43.93, 0.2064, 205.436, 0.230523, 6585.7609101, -2.15812, -18.92, 0.0882, 191.956, 4.898507, 23871.4457146, 0.86109, 31.28, -0.164, 164.729, 2.586078, 14914.4523348, -0.6352, 6.15, -0.035, 147.321, 5.45530, -7700.3894694, -1.5496, -25.01, 0.118, 124.988, 0.48608, 7771.3771450, -0.3309, 3.11, -0.020, 109.380, 3.88323, 8956.9933798, 1.4963, 25.13, -0.129, 55.177,
       5.57033, -1324.1780250, 0.6183, 7.3, -0.035, 45.100, 0.89898, 25195.623740, 0.2428, 24.0, -0.129, 39.533, 3.81213, -8538.240890, 2.8030, 26.1, -0.118, 38.430, 4.30115, 22756.817155, -2.8466, -12.6, 0.042, 36.124, 5.49587, 24986.074274, 4.5688, 75.2, -0.371, 30.773, 1.94559, 14428.125731, -4.3695, -37.7, 0.166, 28.397, 3.28586, 7842.364821, -2.2114, -18.8, 0.077, 24.358, 5.64142, 16171.056245, -0.6885, 6.3, -0.046, 18.585, 4.41371, -557.314280, -1.8538, -22.0, 0.10, 17.954, 3.58454, 8399.679100, -0.3576, 3.2, -0.03, 14.530, 4.9416, 23243.143759, 0.888, 31.2, -0.16, 14.380, 0.9709, 32200.137139, 2.384, 56.4, -0.29, 14.251, 5.7641, -2.301200, 1.523, 25.1, -0.12, 13.899, 0.3735, 31085.508580, -1.324, 12.4, -0.08, 13.194, 1.7595, -9443.319984, -5.231, -69.0, 0.33, 9.679, 3.0997,
       -16029.080894, -3.072, -50.1, 0.24, 9.366, 0.3016, 24080.995180, -3.465, -19.9, 0.08, 8.606, 4.1582, -1742.930514, -3.681, -44.0, 0.21, 8.453, 2.8416, 16100.068570, 1.192, 28.2, -0.14, 8.050, 2.6292, 14286.150380, -0.609, 6.1, -0.03, 7.630, 6.2388, 17285.684804, 3.019, 50.2, -0.25, 7.447, 1.4845, 1256.603910, -0.053, 0.1, -0.01, 7.371, 0.2736, 5957.458955, -2.131, -19.0, 0.09, 7.063, 5.6715, 33.757047, -0.308, -3.6, 0.02, 6.383, 4.7843, 7004.513400, 2.141, 32.4, -0.16, 5.742, 2.6572, 32409.686605, -1.942, 5, -0.05, 4.374, 4.3443, 22128.51520, -2.820, -13, 0.05, 3.998, 3.2545, 33524.31516, 1.766, 49, -0.25, 3.210, 2.2443, 14985.44001, -2.516, -16, 0.06, 2.915, 1.7138, 24499.74767, 0.834, 31, -0.17, 2.732, 1.9887, 13799.82378, -4.343, -38, 0.17, 2.568, 5.4122, -7072.08751, -1.576,
@@ -768,7 +839,7 @@ impl ShouXingUtil {
       4.53, 16309.618, -3, -23, 0, 0.016, 2.54, 15542.754, -1, 6, 0, 0.016, 6.05, 1203.646, 0, 0, 0, 0.015, 5.2, 2751.147, 0, 0, 0, 0.015, 1.8, -10699.924, -5, -69, 0, 0.015, 0.4, 22824.391, -3, -20, 0, 0.015, 2.1, 30666.756, -6, -39, 0, 0.015, 2.1, 6010.417, -2, -19, 0, 0.015, 0.7, -23729.470, -5, -75, 0, 0.015, 1.4, 14363.691, -1, 6, 0, 0.015, 5.8, 16900.689, -2, 0, 0, 0.015, 5.2, 23800.458, 3, 53, 0, 0.015, 5.3, 6035.000, -2, -19, 0, 0.015, 1.2, 8251.139, 2, 25, 0, 0.015, 3.6, -8.860, 0, 0, 0, 0.015, 0.8, 882.739, 0, 0, 0, 0.015, 3.0, 1021.329, 0, 0, 0, 0.015, 0.6, 23296.107, 1, 31, 0, 0.014, 5.4, 7227.181, 2, 25, 0, 0.014, 0.1, 7213.352, -2, -19, 0, 0.014, 4.0, 15506.706, 3, 50, 0, 0.014, 3.4, 7214.774, -2, -19, 0, 0.014, 4.6, 6665.385, -2, -19, 0, 0.014, 0.1, -8.636, -2, -22, 0,
       0.014, 3.1, 15465.202, -1, 6, 0, 0.014, 4.9, 508.863, 0, 0, 0, 0.014, 3.5, 8406.244, 2, 25, 0, 0.014, 1.3, 13313.497, -8, -82, 0, 0.014, 2.8, 49276.619, -3, 0, 0, 0.014, 0.1, 30528.194, -3, -10, 0, 0.013, 1.7, 25128.050, 1, 31, 0, 0.013, 2.9, 14128.405, -1, 6, 0, 0.013, 3.4, 57395.761, 3, 80, 0, 0.013, 2.7, 13029.546, -1, 6, 0, 0.013, 3.9, 7802.556, -2, -19, 0, 0.013, 1.6, 8258.802, -2, -19, 0, 0.013, 2.2, 8417.709, -2, -19, 0, 0.013, 0.7, 9965.210, -2, -19, 0, 0.013, 3.4, 50391.247, 0, 48, 0, 0.013, 3.0, 7134.433, -2, -19, 0, 0.013, 2.9, 30599.182, -5, -31, 0, 0.013, 3.6, -9723.857, 1, 0, 0, 0.013, 4.8, 7607.084, -2, -19, 0, 0.012, 0.8, 23837.689, 1, 35, 0, 0.012, 3.6, 4.409, -4, -44, 0, 0.012, 5.0, 16657.031, 3, 50, 0, 0.012, 4.4, 16657.735, 3, 50, 0, 0.012, 1.1, 15578.803, -4,
       -38, 0, 0.012, 6.0, -11.490, 0, 0, 0, 0.012, 1.9, 8164.398, 0, 0, 0, 0.012, 2.4, 31852.372, -4, -17, 0, 0.012, 2.4, 6607.085, -2, -19, 0, 0.012, 4.2, 8359.870, 0, 0, 0, 0.012, 0.5, 5799.713, -2, -19, 0, 0.012, 2.7, 7220.622, 0, 0, 0, 0.012, 4.3, -139.720, 0, 0, 0, 0.012, 2.3, 13728.836, -2, -16, 0, 0.011, 3.6, 14912.146, 1, 31, 0, 0.011, 4.7, 14916.748, -2, -19, 0".split(",")
-      .map(|v| 
+      .map(|v|
         v.trim().parse::<f64>().unwrap()
       )
       .collect::<Vec<_>>(),
@@ -779,62 +850,50 @@ impl ShouXingUtil {
         0, 0.00094, 1.08, 8328.363, 0, 0, 0, 0.00094, 2.46, 16799.358, -0.7, 6, 0, 0.00094, 1.69, 6376.211, 2.2, 32, 0, 0.00093, 3.64, 8329.020, 3.0, 50, 0, 0.00093, 2.65, 16655.082, 4.6, 75, 0, 0.00090, 1.90, 15056.428, -4.4, -38, 0, 0.00089, 1.59, 52.969, 0, 0, 0, 0.00088, 2.02, -8257.704, -3.4, -47, 0, 0.00088, 3.02, 7213.711, -2.2, -19, 0, 0.00087, 0.50, 7214.415, -2.2, -19, 0, 0.00087, 0.49, 16659.684, 1.5, 25, 0, 0.00082, 5.64, -4.931, 1.5, 25, 0, 0.00079, 5.17, 13171.522, -4.3, -38, 0, 0.00076, 3.60, 29828.905, -1.3, 12, 0, 0.00076, 4.08, 24567.322, 0.3, 24, 0, 0.00076, 4.58, 1884.906, -0.1, 0, 0, 0.00073, 0.33, 31713.811, -1.4, 12, 0, 0.00073, 0.93, 32828.439, 2.4, 56, 0, 0.00071, 5.91, 38785.898, 0.2, 37, 0, 0.00069, 2.20, 15613.742, -2.5, -16, 0, 0.00066, 3.87, 15.732, -2.5,
         -23, 0, 0.00066, 0.86, 25823.926, 0.2, 24, 0, 0.00065, 2.52, 8170.957, 1.5, 25, 0, 0.00063, 0.18, 8322.132, -0.3, 0, 0, 0.00060, 5.84, 8326.062, 1.5, 25, 0, 0.00060, 5.15, 8331.321, 1.5, 25, 0, 0.00060, 2.18, 8486.426, 1.5, 25, 0, 0.00058, 2.30, -1.731, -4, -44, 0, 0.00058, 5.43, 14357.138, -2, -16, 0, 0.00057, 3.09, 8294.910, 2, 29, 0, 0.00057, 4.67, -8362.473, -1, -21, 0, 0.00056, 4.15, 16833.151, -1, 0, 0, 0.00054, 1.93, 7056.329, -2, -19, 0, 0.00054, 5.27, 8315.574, -2, -19, 0, 0.00052, 5.6, 8311.418, -2, -19, 0, 0.00052, 2.7, -77.552, 0, 0, 0, 0.00051, 4.3, 7230.984, 2, 25, 0, 0.00050, 0.4, -0.508, 0, 0, 0, 0.00049, 5.4, 7211.433, -2, -19, 0, 0.00049, 4.4, 7216.693, -2, -19, 0, 0.00049, 4.3, 16864.631, 0, 24, 0, 0.00049, 2.2, 16869.234, -3, -26, 0, 0.00047, 6.1, 627.596, 0,
         0, 0, 0.00047, 5.0, 12.619, 1, 7, 0, 0.00045, 4.9, -8815.018, -5, -69, 0, 0.00044, 1.6, 62.133, -2, -19, 0, 0.00042, 2.9, -13.118, -4, -44, 0, 0.00042, 4.1, -119.445, 0, 0, 0, 0.00041, 4.3, 22756.817, -3, -13, 0, 0.00041, 3.6, 8288.877, 2, 25, 0, 0.00040, 0.5, 6663.308, -2, -19, 0, 0.00040, 1.1, 8368.506, 2, 25, 0, 0.00039, 4.1, 6443.786, 2, 25, 0, 0.00039, 3.1, 16657.383, 3, 50, 0, 0.00038, 0.1, 16657.031, 3, 50, 0, 0.00038, 3.0, 16657.735, 3, 50, 0, 0.00038, 4.6, 23942.433, -1, 9, 0, 0.00037, 4.3, 15385.020, -1, 6, 0, 0.00037, 5.0, 548.678, 0, 0, 0, 0.00036, 1.8, 7213.352, -2, -19, 0, 0.00036, 1.7, 7214.774, -2, -19, 0, 0.00035, 1.1, 7777.936, 2, 25, 0, 0.00035, 1.6, -8.860, 0, 0, 0, 0.00035, 4.4, 23869.145, 2, 56, 0, 0.00035, 2.0, 6691.693, -2, -19, 0, 0.00034, 1.3, -1185.616,
-        -2, -22, 0, 0.00034, 2.2, 23873.747, -1, 6, 0, 0.00033, 2.0, -235.287, 0, 0, 0, 0.00033, 3.1, 17913.987, 3, 50, 0, 0.00033, 1.0, 8351.233, -2, -19, 0".split(",").map(|v| 
+        -2, -22, 0, 0.00034, 2.2, 23873.747, -1, 6, 0, 0.00033, 2.0, -235.287, 0, 0, 0, 0.00033, 3.1, 17913.987, 3, 50, 0, 0.00033, 1.0, 8351.233, -2, -19, 0".split(",").map(|v|
         v.trim().parse::<f64>().unwrap()
       )
       .collect::<Vec<_>>(),
       "0.004870, 4.6693, 628.30196, -0.027, 0, -0.01, 0.002280, 2.6746, -2.30120, 1.523, 25, -0.12, 0.001500, 3.372, 6585.76091, -2.16, -19, 0.1, 0.001200, 5.728, 14914.45233, -0.64, 6, 0, 0.001080, 3.969, 7700.38947, 1.55, 25, -0.1, 0.000800, 0.742, 8956.99338, 1.50, 25, -0.1, 0.000254, 6.002, 0.3286, 1.52, 25, -0.1, 0.000210, 0.144, 7842.3648, -2.21, -19, 0, 0.000180, 2.500, 16171.0562, -0.7, 6, 0, 0.000130, 0.44, 8399.6791, -0.4, 3, 0, 0.000126, 5.03, 8326.3902, 3.0, 50, 0, 0.000120, 5.77, 14286.1504, -0.6, 6, 0, 0.000118, 5.96, 8330.9926, 0, 0, 0, 0.000110, 1.80, 23243.1438, 0.9, 31, 0, 0.000110, 3.42, 5957.4590, -2.1, -19, 0, 0.000110, 4.63, 1256.6039, -0.1, 0, 0, 0.000099, 4.70, -0.7113, 0, 0, 0, 0.000070, 0.04, 16029.0809, 3.1, 50, 0, 0.000070, 5.14, 8328.3391, 1.5, 25, 0,
       0.000070, 5.85, 8329.0437, 1.5, 25, 0, 0.000060, 1.02, -1742.9305, -3.7, -44, 0, 0.000060, 3.10, 17285.6848, 3.0, 50, 0, 0.000054, 5.69, -0.352, 0, 0, 0, 0.000043, 0.52, 15.542, 0, 0, 0, 0.000041, 2.03, 2.630, 0, 0, 0, 0.000040, 0.10, 8470.667, -2.2, -19, 0, 0.000040, 4.01, 7072.088, 1.6, 25, 0, 0.000036, 2.93, -8.860, -0.3, 0, 0, 0.000030, 1.20, 22128.515, -2.8, -13, 0, 0.000030, 2.54, 15542.754, -0.7, 6, 0, 0.000027, 4.43, 7211.762, -0.7, 6, 0, 0.000026, 0.51, 15540.453, 0.9, 31, 0, 0.000026, 1.44, 15545.055, -2.2, -19, 0, 0.000025, 5.37, 7216.364, -3.7, -44, 0".split(",")
-      .map(|v| 
+      .map(|v|
         v.trim().parse::<f64>().unwrap()
       )
       .collect::<Vec<_>>(),
       "0.00001200, 1.041, -2.3012, 1.52, 25, -0.1, 0.00000170, 0.31, -0.711, 0, 0, 0".split(",")
-      .map(|v| 
+      .map(|v|
         v.trim().parse::<f64>().unwrap()
       )
       .collect::<Vec<_>>()
     ]
-  });
-  
-  __static_funk!(__DT_AT, Vec<f64>, vec![
-    -4000., 108371.7, -13036.80, 392.000, 0.0000,
-    -500., 17201.0, -627.82, 16.170, -0.3413,
-    -150., 12200.6, -346.41, 5.403, -0.1593,
-    150., 9113.8, -328.13, -1.647, 0.0377,
-    500., 5707.5, -391.41, 0.915, 0.3145,
-    900., 2203.4, -283.45, 13.034, -0.1778,
-    1300., 490.1, -57.35, 2.085, -0.0072,
-    1600., 120.0, -9.81, -1.532, 0.1403,
-    1700., 10.2, -0.91, 0.510, -0.0370,
-    1800., 13.4, -0.72, 0.202, -0.0193,
-    1830., 7.8, -1.81, 0.416, -0.0247,
-    1860., 8.3, -0.13, -0.406, 0.0292,
-    1880., -5.4, 0.32, -0.183, 0.0173,
-    1900., -2.3, 2.06, 0.169, -0.0135,
-    1920., 21.2, 1.69, -0.304, 0.0167,
-    1940., 24.2, 1.22, -0.064, 0.0031,
-    1960., 33.2, 0.51, 0.231, -0.0109,
-    1980., 51.0, 1.29, -0.026, 0.0032,
-    2000., 63.87, 0.1, 0., 0.,
-    2005., 64.7, 0.21, 0., 0.,
-    2012., 66.8, 0.22, 0., 0.,
-    2018., 69.0, 0.36, 0., 0.,
-    2028., 72.6
-  ]);
+    });
 
-  // 中精度章动计算表
-  __static_funk!(__NUT_B, Vec<f64>, vec![
-    2.1824, -33.75705, 36e-6, -1720., 920.,
-    3.5069, 1256.66393, 11e-6, -132., 57.,
-    1.3375, 16799.4182, -51e-6, -23., 10.,
-    4.3649, -67.5141, 72e-6, 21., -9.,
-    0.04, -628.302, 0., -14., 0.,
-    2.36, 8328.691, 0., 7., 0.,
-    3.46, 1884.966, 0., -5., 2.,
-    5.44, 16833.175, 0., -4., 2.,
-    3.69, 25128.110, 0., -3., 0.,
-    3.55, 628.362, 0., 2., 0.
-  ]);
+    __static_funk!(
+        __DT_AT,
+        Vec<f64>,
+        vec![
+            -4000., 108371.7, -13036.80, 392.000, 0.0000, -500., 17201.0, -627.82, 16.170, -0.3413,
+            -150., 12200.6, -346.41, 5.403, -0.1593, 150., 9113.8, -328.13, -1.647, 0.0377, 500.,
+            5707.5, -391.41, 0.915, 0.3145, 900., 2203.4, -283.45, 13.034, -0.1778, 1300., 490.1,
+            -57.35, 2.085, -0.0072, 1600., 120.0, -9.81, -1.532, 0.1403, 1700., 10.2, -0.91, 0.510,
+            -0.0370, 1800., 13.4, -0.72, 0.202, -0.0193, 1830., 7.8, -1.81, 0.416, -0.0247, 1860.,
+            8.3, -0.13, -0.406, 0.0292, 1880., -5.4, 0.32, -0.183, 0.0173, 1900., -2.3, 2.06,
+            0.169, -0.0135, 1920., 21.2, 1.69, -0.304, 0.0167, 1940., 24.2, 1.22, -0.064, 0.0031,
+            1960., 33.2, 0.51, 0.231, -0.0109, 1980., 51.0, 1.29, -0.026, 0.0032, 2000., 63.87,
+            0.1, 0., 0., 2005., 64.7, 0.21, 0., 0., 2012., 66.8, 0.22, 0., 0., 2018., 69.0, 0.36,
+            0., 0., 2028., 72.6
+        ]
+    );
 
+    // 中精度章动计算表
+    __static_funk!(
+        __NUT_B,
+        Vec<f64>,
+        vec![
+            2.1824, -33.75705, 36e-6, -1720., 920., 3.5069, 1256.66393, 11e-6, -132., 57., 1.3375,
+            16799.4182, -51e-6, -23., 10., 4.3649, -67.5141, 72e-6, 21., -9., 0.04, -628.302, 0.,
+            -14., 0., 2.36, 8328.691, 0., 7., 0., 3.46, 1884.966, 0., -5., 2., 5.44, 16833.175, 0.,
+            -4., 2., 3.69, 25128.110, 0., -3., 0., 3.55, 628.362, 0., 2., 0.
+        ]
+    );
 }
