@@ -13,6 +13,7 @@ pub mod lunar_year;
 pub mod nine_star;
 pub mod shu_jiu;
 pub mod solar;
+pub mod solar_half_year;
 pub mod solar_month;
 pub mod solar_season;
 pub mod solar_week;
@@ -64,6 +65,10 @@ mod shu_jiu_test;
 #[cfg(test)]
 #[path = "../tests/solar_month_test.rs"]
 mod solar_month_test;
+
+#[cfg(test)]
+#[path = "../tests/solar_half_year_test.rs"]
+mod solar_half_year_test;
 
 #[cfg(test)]
 #[path = "../tests/solar_season_test.rs"]
